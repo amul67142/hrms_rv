@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-dark text-white font-sans antialiased;
+  }
+}
+
+/* Dark theme utilities */
+.dark .card { background: #1A1A1A; border: 1px solid #2D2D2D; }
+.dark .sidebar { background: #1A1A1A; }
+.dark .input { background: #1A1A1A; border-color: #2D2D2D; color: white; }
+.dark .input:focus { border-color: #8B5CF6; }
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #1A1A1A;
+}
+::-webkit-scrollbar-thumb {
+  background: #8B5CF6;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #7C3AED;
+}
+
+/* Print styles */
+@media print {
+  body {
+    @apply bg-white text-black;
+  }
+}
+
+/* Dark form elements */
+input, select, textarea {
+  background-color: #1A1A1A;
+  color: white;
+  border-color: #2D2D2D;
+}
+
+input::placeholder {
+  color: #9CA3AF;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: #8B5CF6;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
