@@ -1,8 +1,10 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from '@/lib/core/token'
 import { prisma } from '@/lib/core/db'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
+
+export const dynamic = 'force-dynamic'
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),

@@ -3,6 +3,8 @@ import { getToken } from '@/lib/core/token'
 import { prisma } from '@/lib/core/db'
 import { z } from 'zod'
 
+export const dynamic = 'force-dynamic'
+
 const INDIA_PHONE_REGEX = /^[6-9]\d{9}$/
 const AADHAAR_REGEX = /^[0-9]{12}$/
 const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/

@@ -3,6 +3,8 @@ import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/core/db'
 import { createAuthToken, getAuthCookieOptions } from '@/lib/core/token'
 
+export const dynamic = 'force-dynamic'
+
 function getClientIp(request: NextRequest): string {
   const forwarded = request.headers.get('x-forwarded-for')
   if (forwarded) return forwarded.split(',')[0].trim()

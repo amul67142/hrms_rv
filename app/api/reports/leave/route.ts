@@ -1,8 +1,10 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 import * as XLSX from 'xlsx'
 import type { Role } from '@/types'
+
+export const dynamic = 'force-dynamic'
 
 // Prevent formula injection by prefixing dangerous characters with a single quote
 function sanitizeForCSV(value: string | number | null | undefined): string {

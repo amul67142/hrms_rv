@@ -1,10 +1,12 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 import { z } from 'zod'
 import type { Role } from '@/types'
 import { differenceInCalendarDays } from 'date-fns'
 import { calculateLeaveDays } from '@/lib/services/leave-utils'
+
+export const dynamic = 'force-dynamic'
 
 const createLeaveSchema = z.object({
   employeeId: z.string().optional(),

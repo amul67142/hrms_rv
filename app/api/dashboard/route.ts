@@ -1,7 +1,9 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 import { subDays, format, startOfDay, endOfDay } from 'date-fns'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET(_request: NextRequest) {
   try {

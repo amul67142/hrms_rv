@@ -1,8 +1,10 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 import { z } from 'zod'
 import type { Role } from '@/types'
+
+export const dynamic = 'force-dynamic'
 
 const updateHolidaySchema = z.object({
   name: z.string().min(1).optional(),

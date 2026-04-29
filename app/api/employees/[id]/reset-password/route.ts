@@ -1,9 +1,11 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import type { Role } from '@/types'
+
+export const dynamic = 'force-dynamic'
 
 // In-memory store for reset tokens (expires in 15 minutes)
 const resetTokens = new Map<string, { employeeId: string; userId: string; expiresAt: number }>()

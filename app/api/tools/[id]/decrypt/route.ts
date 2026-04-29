@@ -1,8 +1,10 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from '@/lib/core/token'
 import { prisma } from '@/lib/core/db'
 import { decrypt } from '@/lib/core/crypto'
 import crypto from 'crypto'
+
+export const dynamic = 'force-dynamic'
 
 // Per-request token store (auto-cleanup after 60 seconds)
 const tokenStore = new Map<string, { password: string; expiresAt: number }>()

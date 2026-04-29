@@ -1,6 +1,8 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from '@/lib/core/token'
 import { prisma } from '@/lib/core/db'
+
+export const dynamic = 'force-dynamic'
 
 export async function POST(
   request: NextRequest,

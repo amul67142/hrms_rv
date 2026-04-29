@@ -1,6 +1,8 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from '@/lib/core/token'
 import * as XLSX from 'xlsx'
+
+export const dynamic = 'force-dynamic'
 
 const TEMPLATE_HEADERS = [
   { header: 'employeeCode', key: 'employeeCode' },

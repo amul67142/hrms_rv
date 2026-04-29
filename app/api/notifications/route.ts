@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 
+export const dynamic = 'force-dynamic'
+
 // GET — fetch notifications for the current user
 export async function GET(request: NextRequest) {
   try {

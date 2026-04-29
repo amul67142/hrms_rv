@@ -3,6 +3,8 @@ import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 import type { Role } from '@/types'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: NextRequest) {
   try {
     const token = await getToken({ req: request })

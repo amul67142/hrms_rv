@@ -1,7 +1,9 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 import { z } from 'zod'
+
+export const dynamic = 'force-dynamic'
 
 const createRequestSchema = z.object({
   courseName: z.string().min(1),

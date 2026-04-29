@@ -5,6 +5,8 @@ import { generateSalarySlipPDF } from '@/lib/services/pdf-generator'
 import { rgb } from 'pdf-lib'
 import type { Role } from '@/types'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { month: string; year: string } }

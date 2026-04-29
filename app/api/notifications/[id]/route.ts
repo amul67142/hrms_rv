@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 
+export const dynamic = 'force-dynamic'
+
 // PATCH — mark a single notification as read
 export async function PATCH(
   request: NextRequest,

@@ -1,8 +1,10 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 import { startOfMonth, endOfMonth, subMonths } from 'date-fns'
 import type { Role } from '@/types'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET(
   request: NextRequest,

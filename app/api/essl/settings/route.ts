@@ -3,6 +3,8 @@ import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 import { z } from 'zod'
 
+export const dynamic = 'force-dynamic'
+
 const updateSettingsSchema = z.object({
   portalUrl: z.string().url().optional().or(z.literal('')),
   apiKey: z.string().optional(),

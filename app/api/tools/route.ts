@@ -1,9 +1,11 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 import { z } from 'zod'
 import { encrypt } from '@/lib/core/crypto'
 import { maskPassword } from '@/lib/core/crypto'
+
+export const dynamic = 'force-dynamic'
 
 const createToolSchema = z.object({
   name: z.string().min(1),
@@ -19,7 +21,7 @@ const createToolSchema = z.object({
 
 function sanitizeTool(tool: any) {
   const { password, encryptedPassword, ...rest } = tool
-  // Return masked password — never expose plain text
+  // Return masked password � never expose plain text
   return {
     ...rest,
     password: password ? maskPassword(password) : null,

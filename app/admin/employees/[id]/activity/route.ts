@@ -5,6 +5,7 @@ import type { Role } from '@/types'
 
 export const dynamic = 'force-dynamic'
 
+
 interface ActivityEntry {
   id: string
   module: string

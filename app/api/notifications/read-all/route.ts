@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 
+export const dynamic = 'force-dynamic'
+
 // POST — mark all notifications as read for the current user
 export async function POST(request: NextRequest) {
   try {

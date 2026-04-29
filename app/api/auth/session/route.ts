@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from '@/lib/core/token'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   const token = await getToken({ req: request })
   if (!token) {

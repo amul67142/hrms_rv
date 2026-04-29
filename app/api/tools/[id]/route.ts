@@ -1,9 +1,11 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 import { z } from 'zod'
 import { encrypt } from '@/lib/core/crypto'
 import { maskPassword } from '@/lib/core/crypto'
+
+export const dynamic = 'force-dynamic'
 
 function sanitizeTool(tool: any) {
   const { password, encryptedPassword, ...rest } = tool

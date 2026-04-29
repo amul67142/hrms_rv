@@ -3,6 +3,8 @@ import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 import type { Role } from '@/types'
 
+export const dynamic = 'force-dynamic'
+
 // GET — fetch single employee by ID
 export async function GET(
   request: NextRequest,

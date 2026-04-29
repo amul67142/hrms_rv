@@ -5,6 +5,8 @@ import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import type { Role } from '@/types'
 
+export const dynamic = 'force-dynamic'
+
 // Indian format validation regexes
 const INDIA_PHONE_REGEX = /^[6-9]\d{9}$/
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/

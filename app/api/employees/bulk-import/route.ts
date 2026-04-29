@@ -1,7 +1,9 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from '@/lib/core/token'
 import * as XLSX from 'xlsx'
 import type { Role } from '@/types'
+
+export const dynamic = 'force-dynamic'
 
 const REQUIRED_COLUMNS = [
   'firstName', 'lastName', 'email', 'department', 'designation',

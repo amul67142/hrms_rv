@@ -1,8 +1,10 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 import { z } from 'zod'
 import type { Role } from '@/types'
+
+export const dynamic = 'force-dynamic'
 
 const DOCUMENT_TYPES = ['AADHAR', 'PAN', 'BANK_PROOF', 'ADDRESS_PROOF', 'EXPERIENCE', 'EDUCATION', 'OTHER'] as const
 const DOCUMENT_STATUSES = ['PENDING', 'VERIFIED', 'REJECTED'] as const
@@ -92,10 +94,10 @@ export async function PATCH(
 
     const data = parsed.data
 
-    // Status update (verify/reject) — admin/HR only
+    // Status update (verify/reject) � admin/HR only
     if (data.status !== undefined) {
       if (userRole !== 'ADMIN' && userRole !== 'HR_MANAGER') {
-        return NextResponse.json({ success: false, error: 'Forbidden — only admin/HR can update document status' }, { status: 403 })
+        return NextResponse.json({ success: false, error: 'Forbidden � only admin/HR can update document status' }, { status: 403 })
       }
       if (existing.isLocked) {
         return NextResponse.json({ success: false, error: 'Cannot change status of a locked document' }, { status: 400 })
@@ -105,14 +107,14 @@ export async function PATCH(
       }
     }
 
-    // Lock/unlock — admin/HR only
+    // Lock/unlock � admin/HR only
     if (data.isLocked !== undefined) {
       if (userRole !== 'ADMIN' && userRole !== 'HR_MANAGER') {
-        return NextResponse.json({ success: false, error: 'Forbidden — only admin/HR can lock/unlock documents' }, { status: 403 })
+        return NextResponse.json({ success: false, error: 'Forbidden � only admin/HR can lock/unlock documents' }, { status: 403 })
       }
     }
 
-    // Title update — employee can update their own unverified/unlocked document
+    // Title update � employee can update their own unverified/unlocked document
     if (data.title !== undefined) {
       if (userRole === 'EMPLOYEE' && existing.employeeId !== userEmployeeId) {
         return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
@@ -167,7 +169,7 @@ export async function PATCH(
         employeeId: existing.employeeId,
         module: 'DOCUMENT' as any,
         action: action as any,
-        description: `${action} document "${existing.title}" — ${data.status || ''}`,
+        description: `${action} document "${existing.title}" � ${data.status || ''}`,
         oldValue: JSON.stringify(existing),
         newValue: JSON.stringify(updateData),
       },

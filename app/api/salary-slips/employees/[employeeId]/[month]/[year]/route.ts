@@ -4,6 +4,8 @@ import { getToken } from '@/lib/core/token'
 import { generateSalarySlipPDF } from '@/lib/services/pdf-generator'
 import type { Role } from '@/types'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { employeeId: string; month: string; year: string } }
