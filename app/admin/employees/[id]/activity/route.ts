@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
-import { getToken } from 'next-auth/jwt'
+import { getToken } from '@/lib/core/token'
 import type { Role } from '@/types'
 
 interface ActivityEntry {
