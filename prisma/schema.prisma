@@ -220,6 +220,8 @@ model Employee {
   salaryStructures          SalaryStructure[]
   tasks                     Task[]
   tickets                   Ticket[]
+  learningRequests          LearningRequest[]
+  toolRequests              ToolRequest[]
   user                      User?
 
   @@index([departmentId], map: "employees_departmentId_fkey")
@@ -569,6 +571,53 @@ model Ticket {
   @@map("tickets")
 }
 
+model LearningRequest {
+  id                String    @id @default(cuid()) @db.VarChar(25)
+  employeeId        String    @db.VarChar(25)
+  courseName        String
+  reason            String?   @db.Text
+  projectRelevance  String?   @db.Text
+  skillCategory     String?   @db.VarChar(100)
+  priority          String    @default("MEDIUM") @db.VarChar(20)
+  courseLink         String?   @db.VarChar(500)
+  expectedBenefit   String?   @db.Text
+  status            String    @default("PENDING") @db.VarChar(50)
+  reviewedBy        String?   @db.VarChar(25)
+  reviewedAt        DateTime?
+  reviewNotes       String?   @db.Text
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  employee          Employee  @relation(fields: [employeeId], references: [id])
+
+  @@index([employeeId])
+  @@index([status])
+  @@map("learning_requests")
+}
+
+model ToolRequest {
+  id              String    @id @default(cuid()) @db.VarChar(25)
+  employeeId      String    @db.VarChar(25)
+  toolName        String
+  reason          String    @db.Text
+  projectName     String?
+  priority        String    @default("MEDIUM") @db.VarChar(20)
+  requiredByDate  DateTime?
+  remarks         String?   @db.Text
+  status          String    @default("PENDING") @db.VarChar(50)
+  assignedToolId  String?   @db.VarChar(25)
+  reviewedBy      String?   @db.VarChar(25)
+  reviewedAt      DateTime?
+  reviewNotes     String?   @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  employee        Employee  @relation(fields: [employeeId], references: [id])
+  assignedTool    Tool?     @relation(fields: [assignedToolId], references: [id])
+
+  @@index([employeeId])
+  @@index([status])
+  @@map("tool_requests")
+}
+
 model Tool {
   id                String   @id @default(cuid()) @db.VarChar(25)
   name              String
@@ -585,6 +634,7 @@ model Tool {
   createdBy         String   @db.VarChar(25)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+  toolRequests      ToolRequest[]
 
   @@map("tools")
 }

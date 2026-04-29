@@ -1,0 +1,170 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/core/db'
+import { getToken } from '@/lib/core/token'
+import type { Role } from '@/types'
+
+// GET — fetch single employee by ID
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const token = await getToken({ req: request })
+    if (!token) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const employee = await prisma.employee.findUnique({
+      where: { id: params.id },
+      include: {
+        user: { select: { id: true, email: true, role: true } },
+        salaryStructures: {
+          where: { isActive: true },
+          take: 1,
+          orderBy: { effectiveFrom: 'desc' },
+        },
+        leaveBalances: { where: { year: new Date().getFullYear() } },
+      },
+    })
+
+    if (!employee) {
+      return NextResponse.json({ success: false, error: 'Employee not found' }, { status: 404 })
+    }
+
+    return NextResponse.json({ success: true, data: employee })
+  } catch (error) {
+    console.error('GET /api/employees/[id] error:', error)
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+// PATCH — update employee (status change, profile update, etc.)
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const token = await getToken({ req: request })
+    if (!token) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body = await request.json()
+
+    // Build update data — only include fields that are provided
+    const updateData: Record<string, unknown> = {}
+    const allowedFields = [
+      'firstName', 'lastName', 'phone', 'department', 'designation',
+      'employmentType', 'status', 'gender', 'dateOfBirth', 'maritalStatus',
+      'address', 'city', 'state', 'pincode', 'emergencyContact',
+      'emergencyPhone', 'aadhaarNumber', 'bankAccountNumber', 'ifscCode',
+      'profileCompleted',
+    ]
+
+    for (const field of allowedFields) {
+      if (body[field] !== undefined) {
+        updateData[field] = body[field]
+      }
+    }
+
+    // Handle date fields
+    if (body.dateOfBirth) updateData.dateOfBirth = new Date(body.dateOfBirth)
+    if (body.joiningDate) updateData.joiningDate = new Date(body.joiningDate)
+
+    // If status changed to INACTIVE/TERMINATED/RESIGNED, set deletedAt
+    if (body.status && ['INACTIVE', 'TERMINATED', 'RESIGNED'].includes(body.status)) {
+      updateData.deletedAt = new Date()
+    } else if (body.status === 'ACTIVE') {
+      updateData.deletedAt = null
+    }
+
+    const employee = await prisma.employee.update({
+      where: { id: params.id },
+      data: updateData,
+      include: {
+        user: { select: { id: true, email: true, role: true } },
+      },
+    })
+
+    // Audit log
+    await prisma.auditLog.create({
+      data: {
+        userId: token.sub as string,
+        employeeId: params.id,
+        module: 'EMPLOYEE',
+        action: 'UPDATE',
+        description: `Updated employee ${employee.employeeCode}`,
+        newValue: JSON.stringify(updateData),
+      },
+    }).catch((_e) => {})
+
+    return NextResponse.json({ success: true, data: employee })
+  } catch (error) {
+    console.error('PATCH /api/employees/[id] error:', error)
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+// DELETE — soft delete (set inactive) or hard delete
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const token = await getToken({ req: request })
+    const role = token?.role as Role
+    if (role !== 'ADMIN' && role !== 'HR_MANAGER') {
+      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const hard = searchParams.get('hard') === 'true'
+
+    const employee = await prisma.employee.findUnique({
+      where: { id: params.id },
+      select: { id: true, employeeCode: true, firstName: true, lastName: true },
+    })
+
+    if (!employee) {
+      return NextResponse.json({ success: false, error: 'Employee not found' }, { status: 404 })
+    }
+
+    if (hard) {
+      // Hard delete — remove all related data in a transaction
+      await prisma.$transaction(async (tx) => {
+        await tx.notification.deleteMany({ where: { employeeId: params.id } })
+        await tx.task.deleteMany({ where: { assignedTo: params.id } })
+        await tx.attendance.deleteMany({ where: { employeeId: params.id } })
+        await tx.leaveRequest.deleteMany({ where: { employeeId: params.id } })
+        await tx.leaveBalance.deleteMany({ where: { employeeId: params.id } })
+        await tx.salaryStructure.deleteMany({ where: { employeeId: params.id } })
+        await tx.payrollItem.deleteMany({ where: { employeeId: params.id } })
+        await tx.ticket.deleteMany({ where: { employeeId: params.id } })
+        await tx.user.deleteMany({ where: { employeeId: params.id } })
+        await tx.employee.delete({ where: { id: params.id } })
+      })
+    } else {
+      // Soft delete — mark as inactive
+      await prisma.employee.update({
+        where: { id: params.id },
+        data: { status: 'INACTIVE', deletedAt: new Date() },
+      })
+    }
+
+    // Audit log
+    await prisma.auditLog.create({
+      data: {
+        userId: token?.sub as string,
+        employeeId: hard ? undefined : params.id,
+        module: 'EMPLOYEE',
+        action: 'DELETE',
+        description: `${hard ? 'Hard' : 'Soft'} deleted employee ${employee.employeeCode} - ${employee.firstName} ${employee.lastName}`,
+      },
+    }).catch((_e) => {})
+
+    return NextResponse.json({ success: true, message: hard ? 'Employee permanently deleted' : 'Employee deactivated' })
+  } catch (error) {
+    console.error('DELETE /api/employees/[id] error:', error)
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+  }
+}

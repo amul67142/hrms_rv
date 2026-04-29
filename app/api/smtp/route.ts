@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 
@@ -8,7 +8,7 @@ export async function GET(_request: NextRequest) {
     if (!token || token?.role !== 'ADMIN') {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
-    const settings = await prisma.sMTPSettings.findFirst()
+    const settings = await prisma.smtpSetting.findFirst()
     if (settings && settings.password) {
       settings.password = '********'
     }
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     }
     const body = await request.json()
     const { host, port, secure, username, password, fromEmail, fromName, enabled } = body
-    const existing = await prisma.sMTPSettings.findFirst()
+    const existing = await prisma.smtpSetting.findFirst()
     const data = {
       host,
       port,
@@ -38,9 +38,9 @@ export async function POST(request: NextRequest) {
       enabled,
     }
     if (existing) {
-      await prisma.sMTPSettings.update({ where: { id: existing.id }, data })
+      await prisma.smtpSetting.update({ where: { id: existing.id }, data })
     } else {
-      await prisma.sMTPSettings.create({ data })
+      await prisma.smtpSetting.create({ data })
     }
     return NextResponse.json({ success: true })
   } catch (error) {

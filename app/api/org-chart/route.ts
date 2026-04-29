@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 import type { Role } from '@/types'
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
         designation: true,
         profileImage: true,
         phone: true,
-        departmentRelation: {
+        departmentRef: {
           select: { managerId: true },
         },
       },
@@ -92,9 +92,9 @@ export async function GET(request: NextRequest) {
       name: `${emp.firstName} ${emp.lastName}`.trim(),
       designation: emp.designation,
       department: emp.department,
-      managerId: emp.departmentRelation?.managerId || null,
-      managerName: emp.departmentRelation?.managerId
-        ? employeeNameMap.get(emp.departmentRelation.managerId) || null
+      managerId: emp.departmentRef?.managerId || null,
+      managerName: emp.departmentRef?.managerId
+        ? employeeNameMap.get(emp.departmentRef.managerId) || null
         : null,
       profileImage: emp.profileImage,
       email: emp.email,

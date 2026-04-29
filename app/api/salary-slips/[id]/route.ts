@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 import { generateSalarySlipPDF } from '@/lib/services/pdf-generator'
@@ -43,7 +43,7 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
     }
 
-    const companySettings = await prisma.companySettings.findFirst()
+    const companySettings = await prisma.companySetting.findFirst()
 
     const slipData = {
       companyName: companySettings?.companyName || 'Company Name',

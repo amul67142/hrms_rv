@@ -99,7 +99,7 @@ async function main() {
   console.log(`✅ Deleted ${holidays.count} holidays`)
 
   // 21. ESSL sync logs
-  const esslLogs = await prisma.eSSLSyncLog.deleteMany()
+  const esslLogs = await prisma.esslSyncLog.deleteMany()
   console.log(`✅ Deleted ${esslLogs.count} ESSL sync logs`)
 
   // ─── Summary ────────────────────────────────────────────────────────────
@@ -111,7 +111,7 @@ async function main() {
   const userCount = await prisma.user.count()
   const employeeCount = await prisma.employee.count()
   const deptCount = await prisma.department.count()
-  const settingsCount = await prisma.companySettings.count()
+  const settingsCount = await prisma.companySetting.count()
 
   console.log('\n📊 Remaining records (kept):')
   console.log(`  👤 Users:            ${userCount}`)

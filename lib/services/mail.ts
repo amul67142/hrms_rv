@@ -9,7 +9,7 @@ interface MailOptions {
 }
 
 async function getTransporter() {
-  const settings = await prisma.sMTPSettings.findFirst()
+  const settings = await prisma.smtpSetting.findFirst()
   if (!settings || !settings.enabled) {
     return null
   }
@@ -26,7 +26,7 @@ async function getTransporter() {
 
 export async function sendMail(options: MailOptions): Promise<boolean> {
   try {
-    const settings = await prisma.sMTPSettings.findFirst()
+    const settings = await prisma.smtpSetting.findFirst()
     if (!settings || !settings.enabled) {
       console.log('[Mail] SMTP disabled, skipping:', options.subject)
       return false

@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from '@/lib/core/token'
 import { prisma } from '@/lib/core/db'
 
@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const token = await getToken({ req: request })
     if (!token) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
 
-    const settings = await prisma.companySettings.findFirst({})
+    const settings = await prisma.companySetting.findFirst({})
     return NextResponse.json({
       success: true,
       data: {
@@ -51,7 +51,7 @@ export async function PUT(request: NextRequest) {
       secondSignatoryDesignation,
     } = body
 
-    const settings = await prisma.companySettings.findFirst({})
+    const settings = await prisma.companySetting.findFirst({})
 
     const updateData = {
       salarySlipShowWatermark: showWatermark,
@@ -69,11 +69,11 @@ export async function PUT(request: NextRequest) {
 
     if (!settings) {
       // Create a default settings record with required fields
-      await prisma.companySettings.create({
+      await prisma.companySetting.create({
         data: { companyName: body.companyName || 'Company', ...updateData }
       })
     } else {
-      await prisma.companySettings.update({
+      await prisma.companySetting.update({
         where: { id: settings.id },
         data: updateData,
       })

@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 import { generateSalarySlipPDF } from '@/lib/services/pdf-generator'
@@ -45,7 +45,7 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'No payroll items found' }, { status: 404 })
     }
 
-    const companySettings = await prisma.companySettings.findFirst()
+    const companySettings = await prisma.companySetting.findFirst()
 
     const { PDFDocument, StandardFonts } = await import('pdf-lib')
     const combinedPdf = await PDFDocument.create()

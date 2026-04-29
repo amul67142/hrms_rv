@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 import nodemailer from 'nodemailer'
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Test email address is required' }, { status: 400 })
     }
 
-    const settings = await prisma.sMTPSettings.findFirst()
+    const settings = await prisma.smtpSetting.findFirst()
     if (!settings) {
       return NextResponse.json({ success: false, error: 'SMTP settings not found. Please save settings first.' }, { status: 400 })
     }

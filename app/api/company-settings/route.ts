@@ -1,14 +1,14 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 import type { Role } from '@/types'
 
 export async function GET() {
   try {
-    let settings = await prisma.companySettings.findFirst()
+    let settings = await prisma.companySetting.findFirst()
 
     if (!settings) {
-      settings = await prisma.companySettings.create({
+      settings = await prisma.companySetting.create({
         data: {
           companyName: 'My Company',
           workingDaysPerWeek: 5,
@@ -43,16 +43,16 @@ export async function PUT(request: NextRequest) {
 
     const body = await request.json()
 
-    const existing = await prisma.companySettings.findFirst()
+    const existing = await prisma.companySetting.findFirst()
 
     let updated
     if (existing) {
-      updated = await prisma.companySettings.update({
+      updated = await prisma.companySetting.update({
         where: { id: existing.id },
         data: body,
       })
     } else {
-      updated = await prisma.companySettings.create({
+      updated = await prisma.companySetting.create({
         data: {
           companyName: body.companyName || 'My Company',
           ...body,

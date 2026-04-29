@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 
@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   try {
     await getToken({ req: request })
 
-    const logs = await prisma.eSSLSyncLog.findMany({
+    const logs = await prisma.esslSyncLog.findMany({
       orderBy: { createdAt: 'desc' },
       take: 50,
     })
@@ -28,12 +28,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
     }
 
-    const settings = await prisma.eSSLSettings.findFirst()
+    const settings = await prisma.esslSetting.findFirst()
     if (!settings || !settings.isActive) {
       return NextResponse.json({ success: false, error: 'ESSL integration is not configured or inactive' }, { status: 400 })
     }
 
-    const syncLog = await prisma.eSSLSyncLog.create({
+    const syncLog = await prisma.esslSyncLog.create({
       data: {
         syncType: 'MANUAL',
         status: 'SUCCESS',
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    await prisma.eSSLSettings.update({
+    await prisma.esslSetting.update({
       where: { id: settings.id },
       data: { lastSyncAt: new Date() },
     })

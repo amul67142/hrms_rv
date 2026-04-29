@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 import { z } from 'zod'
@@ -20,10 +20,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
-    let settings = await prisma.eSSLSettings.findFirst()
+    let settings = await prisma.esslSetting.findFirst()
 
     if (!settings) {
-      settings = await prisma.eSSLSettings.create({
+      settings = await prisma.esslSetting.create({
         data: {},
       })
     }
@@ -52,14 +52,14 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: false, error: parsed.error.errors[0].message }, { status: 400 })
     }
 
-    let settings = await prisma.eSSLSettings.findFirst()
+    let settings = await prisma.esslSetting.findFirst()
 
     if (!settings) {
-      settings = await prisma.eSSLSettings.create({
+      settings = await prisma.esslSetting.create({
         data: parsed.data,
       })
     } else {
-      settings = await prisma.eSSLSettings.update({
+      settings = await prisma.esslSetting.update({
         where: { id: settings.id },
         data: parsed.data,
       })

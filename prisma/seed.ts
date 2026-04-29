@@ -49,10 +49,10 @@ async function main() {
   await prisma.learningProgress.deleteMany()
   // 4. Tables that reference LearningModule and Tool
   await prisma.announcement.deleteMany()
-  await prisma.eSSLSyncLog.deleteMany()
+  await prisma.esslSyncLog.deleteMany()
   // 5. Other settings and reference tables
   await prisma.holiday.deleteMany()
-  await prisma.companySettings.deleteMany()
+  await prisma.companySetting.deleteMany()
   // 6. User must be deleted before Employee (FK: user.employeeId -> employee.id)
   await prisma.user.deleteMany()
   // 7. Employee (references Department - Department has optional relation to Employee)
@@ -353,7 +353,7 @@ async function main() {
     })
   }
 
-  await prisma.companySettings.create({
+  await prisma.companySetting.create({
     data: {
       companyName: 'REALVIBE DIGITAL MEDIA PVT. LTD.',
       companyAddress: '303, 3rd Floor, JMD Galleria, Sector 48, Sohna Road, Gurugram, Haryana – 122018',
