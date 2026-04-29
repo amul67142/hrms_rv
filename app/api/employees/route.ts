@@ -192,7 +192,7 @@ export async function POST(request: NextRequest) {
         type: 'SYSTEM',
         link: '/employee/profile',
       },
-    }).catch((_e) => {}) // non-blocking
+    }).catch((_e) => { }) // non-blocking
 
     // Fire admin broadcast notification (no employeeId = admin sees it)
     await prisma.notification.create({
@@ -203,7 +203,7 @@ export async function POST(request: NextRequest) {
         type: 'SYSTEM',
         link: `/admin/employees/${result.employee.id}`,
       },
-    }).catch((_e) => {}) // non-blocking
+    }).catch((_e) => { }) // non-blocking
 
     return NextResponse.json({
       success: true,
