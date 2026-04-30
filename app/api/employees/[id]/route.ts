@@ -88,6 +88,21 @@ export async function PATCH(
       },
     })
 
+    // If role is being updated, only allow ADMIN or HR_MANAGER to change it
+    if (body.role && body.role !== employee.user?.role) {
+      const userRole = token.role as Role
+      if (userRole === 'ADMIN' || userRole === 'HR_MANAGER') {
+        await prisma.user.update({
+          where: { employeeId: params.id },
+          data: { role: body.role }
+        })
+        // Update the returned object to reflect the new role
+        if (employee.user) {
+          employee.user.role = body.role
+        }
+      }
+    }
+
     // Audit log
     await prisma.auditLog.create({
       data: {

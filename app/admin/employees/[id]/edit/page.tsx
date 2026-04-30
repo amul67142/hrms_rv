@@ -43,6 +43,7 @@ interface EditEmployeeData {
   emergencyContactName: string
   emergencyContactPhone: string
   maritalStatus: string
+  role: string
 }
 
 export default function EditEmployeePage() {
@@ -60,7 +61,7 @@ export default function EditEmployeePage() {
     joiningDate: '', status: 'ACTIVE', panNumber: '', aadhaarNumber: '', pfNumber: '',
     uanNumber: '', esiNumber: '', bankName: '', accountNumber: '', ifscCode: '',
     address: '', city: '', state: '', pincode: '', emergencyContactName: '',
-    emergencyContactPhone: '', maritalStatus: 'SINGLE',
+    emergencyContactPhone: '', maritalStatus: 'SINGLE', role: 'EMPLOYEE',
   })
 
   React.useEffect(() => {
@@ -99,6 +100,7 @@ export default function EditEmployeePage() {
             emergencyContactName: emp.emergencyContactName || '',
             emergencyContactPhone: emp.emergencyContactPhone || '',
             maritalStatus: emp.maritalStatus || 'SINGLE',
+            role: emp.user?.role || 'EMPLOYEE',
           })
         }
       } catch (_e) {
@@ -339,6 +341,20 @@ export default function EditEmployeePage() {
                         {['ACTIVE', 'INACTIVE', 'RESIGNED', 'TERMINATED', 'ON_LEAVE'].map((s) => (
                           <SelectItem key={s} value={s} className="text-white hover:bg-white/10">{s.replace('_', ' ')}</SelectItem>
                         ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-gray-300">System Role (Access Level)</Label>
+                    <Select value={formData.role} onValueChange={(v) => handleChange('role', v)}>
+                      <SelectTrigger className="mt-1 border-white/10 bg-white/5 text-white"><SelectValue /></SelectTrigger>
+                      <SelectContent style={{ background: '#1A1A1A' }}>
+                        <SelectItem value="EMPLOYEE" className="text-white hover:bg-white/10">Employee</SelectItem>
+                        <SelectItem value="HR_MANAGER" className="text-white hover:bg-white/10">HR Manager</SelectItem>
+                        <SelectItem value="ADMIN" className="text-white hover:bg-white/10">Admin</SelectItem>
+                        <SelectItem value="MANAGER" className="text-white hover:bg-white/10">Manager</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
