@@ -121,7 +121,7 @@ export default function EditEmployeePage() {
     setSubmitting(true)
     try {
       const res = await fetch(`/api/employees/${params.id}`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       })
