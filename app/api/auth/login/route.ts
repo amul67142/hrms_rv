@@ -122,6 +122,8 @@ export async function POST(request: NextRequest) {
     response.cookies.set(getAuthCookieOptions().name, authToken, getAuthCookieOptions())
     return response
   } catch (error) {
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+    console.error('[LOGIN ERROR]', error)
+    const message = error instanceof Error ? error.message : 'Internal server error'
+    return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }
