@@ -164,7 +164,11 @@ export async function DELETE(
         await tx.hRLetter.deleteMany({ where: { employeeId: params.id } })
         await tx.employeeDocument.deleteMany({ where: { employeeId: params.id } })
         await tx.learningProgress.deleteMany({ where: { employeeId: params.id } })
-        await tx.loginSession.deleteMany({ where: { employeeId: params.id } })
+        // loginSession uses userId, so find user first
+        const users = await tx.user.findMany({ where: { employeeId: params.id }, select: { id: true } })
+        if (users.length > 0) {
+          await tx.loginSession.deleteMany({ where: { userId: { in: users.map(u => u.id) } } })
+        }
         await tx.auditLog.deleteMany({ where: { employeeId: params.id } })
         await tx.user.deleteMany({ where: { employeeId: params.id } })
         await tx.employee.delete({ where: { id: params.id } })
