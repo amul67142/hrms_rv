@@ -149,14 +149,23 @@ export async function DELETE(
     if (hard) {
       // Hard delete — remove all related data in a transaction
       await prisma.$transaction(async (tx) => {
+        // Delete ALL related records to avoid FK constraint errors
         await tx.notification.deleteMany({ where: { employeeId: params.id } })
         await tx.task.deleteMany({ where: { assignedTo: params.id } })
         await tx.attendance.deleteMany({ where: { employeeId: params.id } })
+        await tx.attendanceRegularization.deleteMany({ where: { employeeId: params.id } })
         await tx.leaveRequest.deleteMany({ where: { employeeId: params.id } })
         await tx.leaveBalance.deleteMany({ where: { employeeId: params.id } })
         await tx.salaryStructure.deleteMany({ where: { employeeId: params.id } })
         await tx.payrollItem.deleteMany({ where: { employeeId: params.id } })
         await tx.ticket.deleteMany({ where: { employeeId: params.id } })
+        await tx.reimbursement.deleteMany({ where: { employeeId: params.id } })
+        await tx.resignation.deleteMany({ where: { employeeId: params.id } })
+        await tx.hRLetter.deleteMany({ where: { employeeId: params.id } })
+        await tx.employeeDocument.deleteMany({ where: { employeeId: params.id } })
+        await tx.learningProgress.deleteMany({ where: { employeeId: params.id } })
+        await tx.loginSession.deleteMany({ where: { employeeId: params.id } })
+        await tx.auditLog.deleteMany({ where: { employeeId: params.id } })
         await tx.user.deleteMany({ where: { employeeId: params.id } })
         await tx.employee.delete({ where: { id: params.id } })
       })
@@ -182,6 +191,7 @@ export async function DELETE(
     return NextResponse.json({ success: true, message: hard ? 'Employee permanently deleted' : 'Employee deactivated' })
   } catch (error) {
     console.error('DELETE /api/employees/[id] error:', error)
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+    const message = error instanceof Error ? error.message : 'Internal server error'
+    return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }
