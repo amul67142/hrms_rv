@@ -150,6 +150,7 @@ export async function DELETE(
       // Hard delete — remove all related data in a transaction
       await prisma.$transaction(async (tx) => {
         // Delete ALL related records to avoid FK constraint errors
+        // Timeout increased to 30s — production DB latency causes default 5s to expire
         await tx.notification.deleteMany({ where: { employeeId: params.id } })
         await tx.task.deleteMany({ where: { assignedTo: params.id } })
         await tx.attendance.deleteMany({ where: { employeeId: params.id } })
@@ -172,7 +173,7 @@ export async function DELETE(
         await tx.auditLog.deleteMany({ where: { employeeId: params.id } })
         await tx.user.deleteMany({ where: { employeeId: params.id } })
         await tx.employee.delete({ where: { id: params.id } })
-      })
+      }, { timeout: 30000 })
     } else {
       // Soft delete — mark as inactive
       await prisma.employee.update({

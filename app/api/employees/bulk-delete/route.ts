@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
             }
             await tx.user.deleteMany({ where: { employeeId: id } })
             await tx.employee.delete({ where: { id } })
-          })
+          }, { timeout: 30000 })
         } else {
           // Soft delete
           await prisma.employee.update({
