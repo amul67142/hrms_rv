@@ -3,19 +3,20 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Announcement {
-  id        String   @id @default(cuid()) @db.VarChar(25)
+  id        String   @id @default(cuid()) 
   title     String
-  content   String   @db.Text
-  type      String   @default("GENERAL") @db.VarChar(50)
-  priority  String   @default("NORMAL") @db.VarChar(20)
+  content   String   
+  type      String   @default("GENERAL") 
+  priority  String   @default("NORMAL") 
   isActive  Boolean  @default(true)
   sentEmail Boolean  @default(false)
-  createdBy String   @db.VarChar(25)
+  createdBy String   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -23,14 +24,14 @@ model Announcement {
 }
 
 model Attendance {
-  id          String    @id @default(cuid()) @db.VarChar(25)
-  employeeId  String    @db.VarChar(25)
+  id          String    @id @default(cuid()) 
+  employeeId  String    
   date        DateTime
-  status      String    @db.VarChar(50)
-  inTime      String?   @db.VarChar(10)
-  outTime     String?   @db.VarChar(10)
+  status      String    
+  inTime      String?   
+  outTime     String?   
   hoursWorked Float?
-  remarks     String?   @db.Text
+  remarks     String?   
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   employee    Employee  @relation(fields: [employeeId], references: [id])
@@ -42,15 +43,15 @@ model Attendance {
 }
 
 model AttendanceRegularization {
-  id             String    @id @default(cuid()) @db.VarChar(25)
-  employeeId     String    @db.VarChar(25)
+  id             String    @id @default(cuid()) 
+  employeeId     String    
   date           DateTime
-  type           String    @db.VarChar(50)
-  reason         String    @db.Text
-  status         String    @default("PENDING") @db.VarChar(50)
-  approvedBy     String?   @db.VarChar(25)
+  type           String    
+  reason         String    
+  status         String    @default("PENDING") 
+  approvedBy     String?   
   approvedAt     DateTime?
-  managerRemarks String?   @db.Text
+  managerRemarks String?   
   deductions     Float     @default(0)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
@@ -62,16 +63,16 @@ model AttendanceRegularization {
 }
 
 model AuditLog {
-  id          String    @id @default(cuid()) @db.VarChar(25)
-  userId      String?   @db.VarChar(25)
-  employeeId  String?   @db.VarChar(25)
-  module      String    @db.VarChar(100)
-  action      String    @db.VarChar(100)
-  description String    @db.Text
-  oldValue    String?   @db.Text
-  newValue    String?   @db.Text
-  ipAddress   String?   @db.VarChar(50)
-  userAgent   String?   @db.Text
+  id          String    @id @default(cuid()) 
+  userId      String?   
+  employeeId  String?   
+  module      String    
+  action      String    
+  description String    
+  oldValue    String?   
+  newValue    String?   
+  ipAddress   String?   
+  userAgent   String?   
   createdAt   DateTime  @default(now())
   employee    Employee? @relation(fields: [employeeId], references: [id])
   user        User?     @relation(fields: [userId], references: [id])
@@ -84,27 +85,27 @@ model AuditLog {
 }
 
 model CompanySetting {
-  id                             String   @id @default(cuid()) @db.VarChar(25)
+  id                             String   @id @default(cuid()) 
   companyName                    String
-  companyAddress                 String?  @db.Text
-  phone                          String?  @db.VarChar(50)
+  companyAddress                 String?  
+  phone                          String?  
   email                          String?
   website                        String?
-  logo                           String?  @db.VarChar(500)
-  registrationNumber             String?  @db.VarChar(100)
-  pan                            String?  @db.VarChar(20)
-  tan                            String?  @db.VarChar(20)
-  pfNumber                       String?  @db.VarChar(50)
-  esiNumber                      String?  @db.VarChar(50)
-  ptNumber                       String?  @db.VarChar(50)
+  logo                           String?  
+  registrationNumber             String?  
+  pan                            String?  
+  tan                            String?  
+  pfNumber                       String?  
+  esiNumber                      String?  
+  ptNumber                       String?  
   bankName                       String?
-  bankAccountNumber              String?  @db.VarChar(50)
+  bankAccountNumber              String?  
   bankAccountHolder              String?
-  bankIfsc                       String?  @db.VarChar(20)
-  logoUrl                        String?  @db.VarChar(500)
+  bankIfsc                       String?  
+  logoUrl                        String?  
   workingDaysPerWeek             Int      @default(5)
-  shiftStartTime                 String   @default("09:00") @db.VarChar(10)
-  shiftEndTime                   String   @default("18:00") @db.VarChar(10)
+  shiftStartTime                 String   @default("09:00") 
+  shiftEndTime                   String   @default("18:00") 
   halfDayHours                   Float    @default(4)
   monthlyLeaveEntitlement        Float    @default(1)
   pfRate                         Float    @default(12)
@@ -112,16 +113,16 @@ model CompanySetting {
   professionalTaxRate            Float    @default(200)
   tdsRate                        Float    @default(10)
   leaveEncashmentRate            Float    @default(30)
-  footerText                     String?  @db.Text
-  customLeaveTypes               String?  @db.Text
+  footerText                     String?  
+  customLeaveTypes               String?  
   salarySlipShowWatermark        Boolean  @default(false)
   salarySlipWatermarkText        String?
-  salarySlipHeaderText           String?  @db.VarChar(500)
-  salarySlipFooterText           String?  @db.Text
+  salarySlipHeaderText           String?  
+  salarySlipFooterText           String?  
   salarySlipSignatoryName        String?
   salarySlipSignatoryDesig       String?
   salarySlipShowLogo             Boolean  @default(true)
-  salarySlipPrimaryColor         String   @default("#8B5CF6") @db.VarChar(20)
+  salarySlipPrimaryColor         String   @default("#8B5CF6") 
   salarySlipShowDualSignatures   Boolean  @default(false)
   salarySlipSecondSignatory      String?
   salarySlipSecondSignatoryDesig String?
@@ -132,11 +133,11 @@ model CompanySetting {
 }
 
 model Department {
-  id          String     @id @default(cuid()) @db.VarChar(25)
+  id          String     @id @default(cuid()) 
   name        String     @unique
   code        String     @unique
-  description String?    @db.Text
-  managerId   String?    @db.VarChar(25)
+  description String?    
+  managerId   String?    
   isActive    Boolean    @default(true)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
@@ -147,19 +148,19 @@ model Department {
 }
 
 model EmployeeDocument {
-  id            String    @id @default(cuid()) @db.VarChar(25)
-  employeeId    String    @db.VarChar(25)
+  id            String    @id @default(cuid()) 
+  employeeId    String    
   title         String
-  documentType  String    @db.VarChar(50)
-  fileUrl       String    @db.VarChar(500)
+  documentType  String    
+  fileUrl       String    
   fileName      String
   fileSize      Int
-  status        String    @default("PENDING") @db.VarChar(50)
+  status        String    @default("PENDING") 
   isLocked      Boolean   @default(false)
   uploadedAt    DateTime  @default(now())
   verifiedAt    DateTime?
-  verifiedBy    String?   @db.VarChar(25)
-  rejectionNote String?   @db.Text
+  verifiedBy    String?   
+  rejectionNote String?   
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   employee      Employee  @relation(fields: [employeeId], references: [id])
@@ -170,37 +171,37 @@ model EmployeeDocument {
 }
 
 model Employee {
-  id                        String                     @id @default(cuid()) @db.VarChar(25)
+  id                        String                     @id @default(cuid()) 
   employeeCode              String                     @unique
   firstName                 String
   lastName                  String
   fatherName                String?
   email                     String                     @unique
-  phone                     String?                    @db.VarChar(50)
+  phone                     String?                    
   department                String
-  departmentId              String?                    @db.VarChar(25)
+  departmentId              String?                    
   designation               String
   joiningDate               DateTime
-  employmentType            String                     @default("FULL_TIME") @db.VarChar(50)
-  gender                    String?                    @db.VarChar(20)
+  employmentType            String                     @default("FULL_TIME") 
+  gender                    String?                    
   dateOfBirth               DateTime?
-  address                   String?                    @db.Text
+  address                   String?                    
   city                      String?
   state                     String?
-  pincode                   String?                    @db.VarChar(20)
-  panNumber                 String?                    @db.VarChar(20)
-  aadhaarNumber             String?                    @db.VarChar(20)
+  pincode                   String?                    
+  panNumber                 String?                    
+  aadhaarNumber             String?                    
   bankName                  String?
-  accountNumber             String?                    @db.VarChar(50)
-  ifscCode                  String?                    @db.VarChar(50)
-  pfNumber                  String?                    @db.VarChar(50)
-  uanNumber                 String?                    @db.VarChar(50)
-  esiNumber                 String?                    @db.VarChar(50)
+  accountNumber             String?                    
+  ifscCode                  String?                    
+  pfNumber                  String?                    
+  uanNumber                 String?                    
+  esiNumber                 String?                    
   emergencyContactName      String?
-  emergencyContactPhone     String?                    @db.VarChar(50)
-  maritalStatus             String?                    @db.VarChar(20)
-  status                    String                     @default("ACTIVE") @db.VarChar(50)
-  profileImage              String?                    @db.VarChar(500)
+  emergencyContactPhone     String?                    
+  maritalStatus             String?                    
+  status                    String                     @default("ACTIVE") 
+  profileImage              String?                    
   createdAt                 DateTime                   @default(now())
   updatedAt                 DateTime                   @updatedAt
   profileCompleted          Boolean                    @default(false)
@@ -224,18 +225,18 @@ model Employee {
   toolRequests              ToolRequest[]
   user                      User?
 
-  @@index([departmentId], map: "employees_departmentId_fkey")
+  @@index([departmentId])
   @@index([department])
   @@index([status])
   @@map("employees")
 }
 
 model EsslSetting {
-  id                String    @id @default(cuid()) @db.VarChar(25)
-  portalUrl         String?   @db.VarChar(500)
-  apiKey            String?   @db.VarChar(500)
-  deviceIp          String?   @db.VarChar(100)
-  departmentMapping String?   @db.Text
+  id                String    @id @default(cuid()) 
+  portalUrl         String?   
+  apiKey            String?   
+  deviceIp          String?   
+  departmentMapping String?   
   autoSyncEnabled   Boolean   @default(false)
   syncInterval      Int       @default(15)
   lastSyncAt        DateTime?
@@ -247,13 +248,13 @@ model EsslSetting {
 }
 
 model EsslSyncLog {
-  id               String    @id @default(cuid()) @db.VarChar(25)
-  syncType         String    @db.VarChar(50)
-  status           String    @db.VarChar(50)
+  id               String    @id @default(cuid()) 
+  syncType         String    
+  status           String    
   recordsProcessed Int?
   recordsCreated   Int?
   recordsUpdated   Int?
-  errors           String?   @db.Text
+  errors           String?   
   startedAt        DateTime
   completedAt      DateTime?
   createdAt        DateTime  @default(now())
@@ -262,12 +263,12 @@ model EsslSyncLog {
 }
 
 model Holiday {
-  id          String   @id @default(cuid()) @db.VarChar(25)
+  id          String   @id @default(cuid()) 
   name        String
   date        DateTime
   year        Int
-  type        String   @default("PUBLIC") @db.VarChar(20)
-  description String?  @db.Text
+  type        String   @default("PUBLIC") 
+  description String?  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -276,39 +277,39 @@ model Holiday {
 }
 
 model HRLetter {
-  id         String    @id @default(cuid()) @db.VarChar(25)
-  employeeId String    @db.VarChar(25)
-  type       String    @db.VarChar(50)
+  id         String    @id @default(cuid()) 
+  employeeId String    
+  type       String    
   title      String
-  content    String?   @db.Text
-  status     String    @default("DRAFT") @db.VarChar(50)
+  content    String?   
+  status     String    @default("DRAFT") 
   issuedAt   DateTime?
   responseAt DateTime?
-  createdBy  String    @db.VarChar(25)
+  createdBy  String    
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   employee   Employee  @relation(fields: [employeeId], references: [id])
 
-  @@index([employeeId], map: "hr_letters_employeeId_fkey")
+  @@index([employeeId])
   @@map("hr_letters")
 }
 
 model LearningModule {
-  id                 String   @id @default(cuid()) @db.VarChar(25)
+  id                 String   @id @default(cuid()) 
   title              String
-  description        String?  @db.Text
-  category           String   @db.VarChar(100)
-  fileUrl            String?  @db.VarChar(500)
+  description        String?  
+  category           String   
+  fileUrl            String?  
   fileName           String?
   fileSize           Int?
-  fileType           String?  @db.VarChar(100)
-  thumbnailUrl       String?  @db.VarChar(500)
-  duration           String?  @db.VarChar(50)
+  fileType           String?  
+  thumbnailUrl       String?  
+  duration           String?  
   isActive           Boolean  @default(true)
   isFeatured         Boolean  @default(false)
   views              Int      @default(0)
-  enrollmentRequests String?  @db.Text
-  createdBy          String   @db.VarChar(25)
+  enrollmentRequests String?  
+  createdBy          String   
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -316,9 +317,9 @@ model LearningModule {
 }
 
 model LearningProgress {
-  id             String    @id @default(cuid()) @db.VarChar(25)
-  employeeId     String    @db.VarChar(25)
-  moduleId       String    @db.VarChar(25)
+  id             String    @id @default(cuid()) 
+  employeeId     String    
+  moduleId       String    
   progress       Int       @default(0)
   isCompleted    Boolean   @default(false)
   completedAt    DateTime?
@@ -331,9 +332,9 @@ model LearningProgress {
 }
 
 model LeaveBalance {
-  id              String   @id @default(cuid()) @db.VarChar(25)
-  employeeId      String   @db.VarChar(25)
-  leaveType       String   @db.VarChar(50)
+  id              String   @id @default(cuid()) 
+  employeeId      String   
+  leaveType       String   
   year            Int
   entitled        Float    @default(0)
   taken           Float    @default(0)
@@ -351,19 +352,19 @@ model LeaveBalance {
 }
 
 model LeaveRequest {
-  id         String    @id @default(cuid()) @db.VarChar(25)
-  employeeId String    @db.VarChar(25)
-  leaveType  String    @db.VarChar(50)
+  id         String    @id @default(cuid()) 
+  employeeId String    
+  leaveType  String    
   startDate  DateTime
   endDate    DateTime
   totalDays  Float
   halfDay    Boolean   @default(false)
-  reason     String?   @db.Text
-  status     String    @default("PENDING") @db.VarChar(50)
+  reason     String?   
+  status     String    @default("PENDING") 
   appliedAt  DateTime  @default(now())
-  approvedBy String?   @db.VarChar(25)
+  approvedBy String?   
   approvedAt DateTime?
-  remarks    String?   @db.Text
+  remarks    String?   
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   employee   Employee  @relation(fields: [employeeId], references: [id])
@@ -375,15 +376,15 @@ model LeaveRequest {
 }
 
 model LoginSession {
-  id         String    @id @default(cuid()) @db.VarChar(25)
-  userId     String    @db.VarChar(25)
-  ipAddress  String?   @db.VarChar(50)
-  city       String?   @db.VarChar(100)
-  country    String?   @db.VarChar(100)
-  deviceType String?   @db.VarChar(50)
-  browser    String?   @db.VarChar(100)
-  os         String?   @db.VarChar(100)
-  userAgent  String?   @db.Text
+  id         String    @id @default(cuid()) 
+  userId     String    
+  ipAddress  String?   
+  city       String?   
+  country    String?   
+  deviceType String?   
+  browser    String?   
+  os         String?   
+  userAgent  String?   
   sessionId  String?   @unique
   loginAt    DateTime  @default(now())
   logoutAt   DateTime?
@@ -397,14 +398,14 @@ model LoginSession {
 }
 
 model Notification {
-  id         String    @id @default(cuid()) @db.VarChar(25)
-  employeeId String?   @db.VarChar(25)
+  id         String    @id @default(cuid()) 
+  employeeId String?   
   title      String
-  message    String    @db.Text
-  type       String    @default("SYSTEM") @db.VarChar(50)
+  message    String    
+  type       String    @default("SYSTEM") 
   isRead     Boolean   @default(false)
   readAt     DateTime?
-  link       String?   @db.VarChar(500)
+  link       String?   
   createdAt  DateTime  @default(now())
   employee   Employee? @relation(fields: [employeeId], references: [id])
 
@@ -414,8 +415,8 @@ model Notification {
 }
 
 model PayrollItem {
-  id                   String    @id @default(cuid()) @db.VarChar(25)
-  employeeId           String    @db.VarChar(25)
+  id                   String    @id @default(cuid()) 
+  employeeId           String    
   month                Int
   year                 Int
   basicSalary          Float
@@ -436,11 +437,11 @@ model PayrollItem {
   totalDeduction       Float
   netSalary            Float
   paidDays             Float
-  status               String    @default("DRAFT") @db.VarChar(50)
+  status               String    @default("DRAFT") 
   paidAt               DateTime?
   lockedAt             DateTime?
-  lockedBy             String?   @db.VarChar(25)
-  overrides            String?   @db.Text
+  lockedBy             String?   
+  overrides            String?   
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
   employee             Employee  @relation(fields: [employeeId], references: [id])
@@ -452,47 +453,47 @@ model PayrollItem {
 }
 
 model Reimbursement {
-  id          String    @id @default(cuid()) @db.VarChar(25)
-  employeeId  String    @db.VarChar(25)
+  id          String    @id @default(cuid()) 
+  employeeId  String    
   title       String
-  description String?   @db.Text
+  description String?   
   amount      Float
-  category    String    @db.VarChar(50)
-  status      String    @default("PENDING") @db.VarChar(50)
-  receiptUrl  String?   @db.VarChar(500)
+  category    String    
+  status      String    @default("PENDING") 
+  receiptUrl  String?   
   submittedAt DateTime  @default(now())
   reviewedAt  DateTime?
-  reviewedBy  String?   @db.VarChar(25)
-  notes       String?   @db.Text
+  reviewedBy  String?   
+  notes       String?   
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   employee    Employee  @relation(fields: [employeeId], references: [id])
 
-  @@index([employeeId], map: "reimbursements_employeeId_fkey")
+  @@index([employeeId])
   @@map("reimbursements")
 }
 
 model Resignation {
-  id              String    @id @default(cuid()) @db.VarChar(25)
-  employeeId      String    @db.VarChar(25)
-  reason          String?   @db.Text
+  id              String    @id @default(cuid()) 
+  employeeId      String    
+  reason          String?   
   intendedLastDay DateTime
-  status          String    @default("PENDING") @db.VarChar(50)
+  status          String    @default("PENDING") 
   reviewedAt      DateTime?
-  reviewedBy      String?   @db.VarChar(25)
-  reviewNotes     String?   @db.Text
+  reviewedBy      String?   
+  reviewNotes     String?   
   actualLastDay   DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   employee        Employee  @relation(fields: [employeeId], references: [id])
 
-  @@index([employeeId], map: "resignations_employeeId_fkey")
+  @@index([employeeId])
   @@map("resignations")
 }
 
 model SalaryStructure {
-  id                  String    @id @default(cuid()) @db.VarChar(25)
-  employeeId          String    @db.VarChar(25)
+  id                  String    @id @default(cuid()) 
+  employeeId          String    
   effectiveFrom       DateTime
   effectiveTo         DateTime?
   basicSalary         Float
@@ -510,17 +511,17 @@ model SalaryStructure {
   updatedAt           DateTime  @updatedAt
   employee            Employee  @relation(fields: [employeeId], references: [id])
 
-  @@index([employeeId], map: "salary_structures_employeeId_fkey")
+  @@index([employeeId])
   @@map("salary_structures")
 }
 
 model SmtpSetting {
-  id        String   @id @default(cuid()) @db.VarChar(25)
+  id        String   @id @default(cuid()) 
   host      String   @default("smtp.gmail.com")
   port      Int      @default(587)
   secure    Boolean  @default(false)
   username  String
-  password  String   @db.VarChar(500)
+  password  String   
   fromEmail String
   fromName  String   @default("Realvibe HRM")
   enabled   Boolean  @default(false)
@@ -531,14 +532,14 @@ model SmtpSetting {
 }
 
 model Task {
-  id           String      @id @default(cuid()) @db.VarChar(25)
+  id           String      @id @default(cuid()) 
   title        String
-  description  String?     @db.Text
-  assignedTo   String      @db.VarChar(25)
-  assignedBy   String?     @db.VarChar(25)
-  departmentId String?     @db.VarChar(25)
-  priority     String      @default("MEDIUM") @db.VarChar(20)
-  status       String      @default("PENDING") @db.VarChar(50)
+  description  String?     
+  assignedTo   String      
+  assignedBy   String?     
+  departmentId String?     
+  priority     String      @default("MEDIUM") 
+  status       String      @default("PENDING") 
   dueDate      DateTime?
   completedAt  DateTime?
   createdAt    DateTime    @default(now())
@@ -547,21 +548,21 @@ model Task {
   department   Department? @relation(fields: [departmentId], references: [id])
 
   @@index([assignedTo])
-  @@index([departmentId], map: "tasks_departmentId_fkey")
+  @@index([departmentId])
   @@index([status])
   @@map("tasks")
 }
 
 model Ticket {
-  id          String    @id @default(cuid()) @db.VarChar(25)
-  employeeId  String    @db.VarChar(25)
+  id          String    @id @default(cuid()) 
+  employeeId  String    
   title       String
-  description String    @db.Text
-  category    String    @default("GENERAL") @db.VarChar(50)
-  priority    String    @default("MEDIUM") @db.VarChar(20)
-  status      String    @default("OPEN") @db.VarChar(50)
-  assignedTo  String?   @db.VarChar(25)
-  resolution  String?   @db.Text
+  description String    
+  category    String    @default("GENERAL") 
+  priority    String    @default("MEDIUM") 
+  status      String    @default("OPEN") 
+  assignedTo  String?   
+  resolution  String?   
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   employee    Employee  @relation(fields: [employeeId], references: [id])
@@ -572,19 +573,19 @@ model Ticket {
 }
 
 model LearningRequest {
-  id                String    @id @default(cuid()) @db.VarChar(25)
-  employeeId        String    @db.VarChar(25)
+  id                String    @id @default(cuid()) 
+  employeeId        String    
   courseName        String
-  reason            String?   @db.Text
-  projectRelevance  String?   @db.Text
-  skillCategory     String?   @db.VarChar(100)
-  priority          String    @default("MEDIUM") @db.VarChar(20)
-  courseLink         String?   @db.VarChar(500)
-  expectedBenefit   String?   @db.Text
-  status            String    @default("PENDING") @db.VarChar(50)
-  reviewedBy        String?   @db.VarChar(25)
+  reason            String?   
+  projectRelevance  String?   
+  skillCategory     String?   
+  priority          String    @default("MEDIUM") 
+  courseLink         String?   
+  expectedBenefit   String?   
+  status            String    @default("PENDING") 
+  reviewedBy        String?   
   reviewedAt        DateTime?
-  reviewNotes       String?   @db.Text
+  reviewNotes       String?   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   employee          Employee  @relation(fields: [employeeId], references: [id])
@@ -595,19 +596,19 @@ model LearningRequest {
 }
 
 model ToolRequest {
-  id              String    @id @default(cuid()) @db.VarChar(25)
-  employeeId      String    @db.VarChar(25)
+  id              String    @id @default(cuid()) 
+  employeeId      String    
   toolName        String
-  reason          String    @db.Text
+  reason          String    
   projectName     String?
-  priority        String    @default("MEDIUM") @db.VarChar(20)
+  priority        String    @default("MEDIUM") 
   requiredByDate  DateTime?
-  remarks         String?   @db.Text
-  status          String    @default("PENDING") @db.VarChar(50)
-  assignedToolId  String?   @db.VarChar(25)
-  reviewedBy      String?   @db.VarChar(25)
+  remarks         String?   
+  status          String    @default("PENDING") 
+  assignedToolId  String?   
+  reviewedBy      String?   
   reviewedAt      DateTime?
-  reviewNotes     String?   @db.Text
+  reviewNotes     String?   
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   employee        Employee  @relation(fields: [employeeId], references: [id])
@@ -619,19 +620,19 @@ model ToolRequest {
 }
 
 model Tool {
-  id                String   @id @default(cuid()) @db.VarChar(25)
+  id                String   @id @default(cuid()) 
   name              String
-  description       String?  @db.Text
-  type              String   @default("OTHER") @db.VarChar(50)
-  url               String?  @db.VarChar(500)
+  description       String?  
+  type              String   @default("OTHER") 
+  url               String?  
   username          String?
-  password          String?  @db.VarChar(500)
-  encryptedPassword String?  @db.Text
-  notes             String?  @db.Text
-  category          String?  @db.VarChar(100)
+  password          String?  
+  encryptedPassword String?  
+  notes             String?  
+  category          String?  
   isShared          Boolean  @default(false)
-  accessRequests    String?  @db.Text
-  createdBy         String   @db.VarChar(25)
+  accessRequests    String?  
+  createdBy         String   
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   toolRequests      ToolRequest[]
@@ -640,11 +641,11 @@ model Tool {
 }
 
 model User {
-  id            String         @id @default(cuid()) @db.VarChar(25)
+  id            String         @id @default(cuid()) 
   email         String         @unique
   password      String
-  role          String         @default("EMPLOYEE") @db.VarChar(50)
-  employeeId    String?        @unique @db.VarChar(25)
+  role          String         @default("EMPLOYEE") 
+  employeeId    String?        @unique 
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   auditLogs     AuditLog[]

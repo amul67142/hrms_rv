@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "chmod -R 755 .",
     "postinstall": "prisma generate",
     "build": "next build",
     "start": "next start",
