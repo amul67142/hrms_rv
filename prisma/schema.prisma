@@ -34,7 +34,7 @@ model Attendance {
   remarks     String?   
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  employee    Employee  @relation(fields: [employeeId], references: [id])
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@unique([employeeId, date])
   @@index([date])
@@ -55,7 +55,7 @@ model AttendanceRegularization {
   deductions     Float     @default(0)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
-  employee       Employee  @relation(fields: [employeeId], references: [id])
+  employee       Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@index([employeeId])
   @@index([status])
@@ -74,8 +74,8 @@ model AuditLog {
   ipAddress   String?   
   userAgent   String?   
   createdAt   DateTime  @default(now())
-  employee    Employee? @relation(fields: [employeeId], references: [id])
-  user        User?     @relation(fields: [userId], references: [id])
+  employee    Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([createdAt])
   @@index([employeeId])
@@ -163,7 +163,7 @@ model EmployeeDocument {
   rejectionNote String?   
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  employee      Employee  @relation(fields: [employeeId], references: [id])
+  employee      Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@index([documentType])
   @@index([employeeId])
@@ -173,6 +173,7 @@ model EmployeeDocument {
 model Employee {
   id                        String                     @id @default(cuid()) 
   employeeCode              String                     @unique
+  esslCode                  String?                    @unique
   firstName                 String
   lastName                  String
   fatherName                String?
@@ -288,7 +289,7 @@ model HRLetter {
   createdBy  String    
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
-  employee   Employee  @relation(fields: [employeeId], references: [id])
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@index([employeeId])
   @@map("hr_letters")
@@ -344,7 +345,7 @@ model LeaveBalance {
   carryForwardMax Int      @default(0)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  employee        Employee @relation(fields: [employeeId], references: [id])
+  employee        Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@unique([employeeId, leaveType, year])
   @@index([employeeId])
@@ -367,7 +368,7 @@ model LeaveRequest {
   remarks    String?   
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
-  employee   Employee  @relation(fields: [employeeId], references: [id])
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@index([appliedAt])
   @@index([employeeId])
@@ -389,7 +390,7 @@ model LoginSession {
   loginAt    DateTime  @default(now())
   logoutAt   DateTime?
   isActive   Boolean   @default(true)
-  user       User      @relation(fields: [userId], references: [id])
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([isActive])
   @@index([loginAt])
@@ -407,7 +408,7 @@ model Notification {
   readAt     DateTime?
   link       String?   
   createdAt  DateTime  @default(now())
-  employee   Employee? @relation(fields: [employeeId], references: [id])
+  employee   Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@index([employeeId])
   @@index([isRead])
@@ -444,7 +445,7 @@ model PayrollItem {
   overrides            String?   
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
-  employee             Employee  @relation(fields: [employeeId], references: [id])
+  employee             Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@unique([employeeId, month, year])
   @@index([month, year])
@@ -467,7 +468,7 @@ model Reimbursement {
   notes       String?   
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  employee    Employee  @relation(fields: [employeeId], references: [id])
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@index([employeeId])
   @@map("reimbursements")
@@ -485,7 +486,7 @@ model Resignation {
   actualLastDay   DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
-  employee        Employee  @relation(fields: [employeeId], references: [id])
+  employee        Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@index([employeeId])
   @@map("resignations")
@@ -509,7 +510,7 @@ model SalaryStructure {
   isActive            Boolean   @default(true)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
-  employee            Employee  @relation(fields: [employeeId], references: [id])
+  employee            Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@index([employeeId])
   @@map("salary_structures")
@@ -544,7 +545,7 @@ model Task {
   completedAt  DateTime?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
-  assignee     Employee    @relation(fields: [assignedTo], references: [id])
+  assignee     Employee    @relation(fields: [assignedTo], references: [id], onDelete: Cascade)
   department   Department? @relation(fields: [departmentId], references: [id])
 
   @@index([assignedTo])
@@ -565,7 +566,7 @@ model Ticket {
   resolution  String?   
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  employee    Employee  @relation(fields: [employeeId], references: [id])
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@index([employeeId])
   @@index([status])
@@ -588,7 +589,7 @@ model LearningRequest {
   reviewNotes       String?   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
-  employee          Employee  @relation(fields: [employeeId], references: [id])
+  employee          Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@index([employeeId])
   @@index([status])
@@ -611,7 +612,7 @@ model ToolRequest {
   reviewNotes     String?   
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
-  employee        Employee  @relation(fields: [employeeId], references: [id])
+  employee        Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   assignedTool    Tool?     @relation(fields: [assignedToolId], references: [id])
 
   @@index([employeeId])
@@ -641,16 +642,18 @@ model Tool {
 }
 
 model User {
-  id            String         @id @default(cuid()) 
-  email         String         @unique
-  password      String
-  role          String         @default("EMPLOYEE") 
-  employeeId    String?        @unique 
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  auditLogs     AuditLog[]
-  loginSessions LoginSession[]
-  employee      Employee?      @relation(fields: [employeeId], references: [id])
+  id                String         @id @default(cuid()) 
+  email             String         @unique
+  password          String
+  role              String         @default("EMPLOYEE") 
+  employeeId        String?        @unique 
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  auditLogs         AuditLog[]
+  loginSessions     LoginSession[]
+  employee          Employee?      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  resetToken        String?        @unique
+  resetTokenExpires DateTime?
 
   @@map("users")
 }

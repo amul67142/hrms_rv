@@ -50,15 +50,23 @@ export async function GET(_request: NextRequest) {
       count: d._count.department,
     }))
 
+    const weekStartDate = startOfDay(subDays(new Date(), 6))
+    const weekEndDate = endOfDay(new Date())
+    
+    const weekAttendance = await prisma.attendance.findMany({
+      where: { date: { gte: weekStartDate, lte: weekEndDate } },
+      select: { date: true, status: true },
+    })
+
     const attendanceTrend: { date: string; present: number; absent: number }[] = []
     for (let i = 6; i >= 0; i--) {
       const date = subDays(new Date(), i)
-      const dayStart = startOfDay(date)
-      const dayEnd = endOfDay(date)
+      const dayStart = startOfDay(date).getTime()
+      const dayEnd = endOfDay(date).getTime()
 
-      const dayAttendance = await prisma.attendance.findMany({
-        where: { date: { gte: dayStart, lte: dayEnd } },
-        select: { status: true },
+      const dayAttendance = weekAttendance.filter((a) => {
+        const time = a.date.getTime()
+        return time >= dayStart && time <= dayEnd
       })
 
       attendanceTrend.push({

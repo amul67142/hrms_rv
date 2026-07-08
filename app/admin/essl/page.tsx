@@ -86,104 +86,33 @@ interface ImportLog {
   errorReportUrl?: string
 }
 
-// ---------------------------------------------------------------------------
-// Mock import logs
-// ---------------------------------------------------------------------------
-
-const mockImportLogs: ImportLog[] = [
-  {
-    id: '1',
-    fileName: 'attendance_march_2024.xlsx',
-    uploadedBy: 'admin@company.com',
-    uploadedAt: new Date('2024-04-01T10:30:00'),
-    totalRecords: 320,
-    successCount: 315,
-    failedCount: 3,
-    duplicateCount: 2,
-    status: 'PARTIAL',
-  },
-  {
-    id: '2',
-    fileName: 'attendance_feb_2024.xlsx',
-    uploadedBy: 'admin@company.com',
-    uploadedAt: new Date('2024-03-05T14:15:00'),
-    totalRecords: 280,
-    successCount: 280,
-    failedCount: 0,
-    duplicateCount: 0,
-    status: 'SUCCESS',
-  },
-  {
-    id: '3',
-    fileName: 'attendance_jan_2024.xlsx',
-    uploadedBy: 'hr@company.com',
-    uploadedAt: new Date('2024-02-01T09:00:00'),
-    totalRecords: 300,
-    successCount: 298,
-    failedCount: 2,
-    duplicateCount: 15,
-    status: 'SUCCESS',
-  },
-  {
-    id: '4',
-    fileName: 'attendance_dec_2023.xlsx',
-    uploadedBy: 'admin@company.com',
-    uploadedAt: new Date('2024-01-08T11:20:00'),
-    totalRecords: 150,
-    successCount: 0,
-    failedCount: 150,
-    duplicateCount: 0,
-    status: 'FAILED',
-  },
-  {
-    id: '5',
-    fileName: 'attendance_nov_2023.xlsx',
-    uploadedBy: 'admin@company.com',
-    uploadedAt: new Date('2023-12-03T08:45:00'),
-    totalRecords: 290,
-    successCount: 290,
-    failedCount: 0,
-    duplicateCount: 8,
-    status: 'SUCCESS',
-  },
-]
-
-// Mock employee code mapping
-const MOCK_EMPLOYEE_MAP: Record<string, string | undefined> = {
-  'EMP001': 'HRM-EMP-001',
-  'EMP002': 'HRM-EMP-002',
-  'EMP003': 'HRM-EMP-003',
-  'EMP004': undefined, // not found
-  'EMP005': 'HRM-EMP-005',
-}
+// No mock data — import logs are fetched from the API
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function validateRow(row: ImportRow, index: number): { valid: boolean; error?: string; warning?: string; mappedCode?: string } {
+function validateRow(row: ImportRow, _index: number): { valid: boolean; error?: string; warning?: string; mappedCode?: string } {
   if (!row.employee_code || row.employee_code.trim() === '') {
     return { valid: false, error: 'Missing employee_code' }
   }
   if (!row.date || row.date.trim() === '') {
     return { valid: false, error: 'Missing date' }
   }
-  const mapped = MOCK_EMPLOYEE_MAP[row.employee_code.trim()]
-  if (!mapped) {
-    return { valid: false, error: `Employee code "${row.employee_code}" not found in HRM system` }
-  }
   const hasCheckIn = row.check_in_time && row.check_in_time.trim() !== ''
   const hasCheckOut = row.check_out_time && row.check_out_time.trim() !== ''
   if (!hasCheckIn && !hasCheckOut) {
     return { valid: false, error: 'At least one of check_in_time or check_out_time is required' }
   }
+  // Employee code validation happens server-side during import
+  const code = row.employee_code.trim()
   if (!hasCheckIn) {
-    return { valid: true, warning: 'Missing check_in_time — will be recorded as check-out only', mappedCode: mapped }
+    return { valid: true, warning: 'Missing check_in_time — will be recorded as check-out only', mappedCode: code }
   }
   if (!hasCheckOut) {
-    return { valid: true, warning: 'Missing check_out_time — will be recorded as check-in only', mappedCode: mapped }
+    return { valid: true, warning: 'Missing check_out_time — will be recorded as check-in only', mappedCode: code }
   }
-  return { valid: true, mappedCode: mapped }
+  return { valid: true, mappedCode: code }
 }
 
 function downloadTemplate() {
@@ -318,7 +247,7 @@ export default function ESSLAttendancePage() {
   const fileInputRef = React.useRef<HTMLInputElement>(null)
 
   // ---- Import log state ----
-  const [importLogs, setImportLogs] = React.useState<ImportLog[]>(mockImportLogs)
+  const [importLogs, setImportLogs] = React.useState<ImportLog[]>([])
   const [logPage, setLogPage] = React.useState(1)
   const logsPerPage = 10
 
@@ -414,11 +343,22 @@ export default function ESSLAttendancePage() {
     setValidationErrors([])
     setValidationWarnings([])
 
+    const isCsv = file.name.toLowerCase().endsWith('.csv')
+
     const reader = new FileReader()
     reader.onload = (e) => {
       try {
-        const data = new Uint8Array(e.target!.result as ArrayBuffer)
-        const workbook = XLSX.read(data, { type: 'array' })
+        let workbook: XLSX.WorkBook
+        if (isCsv) {
+          // CSV: read as text string
+          const csvText = e.target!.result as string
+          workbook = XLSX.read(csvText, { type: 'string' })
+        } else {
+          // Excel: read as binary array
+          const data = new Uint8Array(e.target!.result as ArrayBuffer)
+          workbook = XLSX.read(data, { type: 'array' })
+        }
+
         const sheetName = workbook.SheetNames[0]
         const sheet = workbook.Sheets[sheetName]
         const json = XLSX.utils.sheet_to_json<ImportRow>(sheet, { defval: '' })
@@ -469,10 +409,17 @@ export default function ESSLAttendancePage() {
         setShowPreview(true)
         toast({ title: 'File parsed', description: `${processed.length} records found. Preview ready.` })
       } catch (err) {
-        toast({ title: 'Parse error', description: 'Could not read the Excel file. Make sure it is a valid .xlsx file.', variant: 'destructive' })
+        console.error('File parse error:', err)
+        toast({ title: 'Parse error', description: 'Could not read the file. Make sure it is a valid .xlsx, .xls, or .csv file.', variant: 'destructive' })
       }
     }
-    reader.readAsArrayBuffer(file)
+
+    // Read CSV as text, Excel as binary
+    if (isCsv) {
+      reader.readAsText(file)
+    } else {
+      reader.readAsArrayBuffer(file)
+    }
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -549,21 +496,7 @@ export default function ESSLAttendancePage() {
         toast({ title: 'Import failed', description: json.error || 'Import operation failed.', variant: 'destructive' })
       }
     } catch (_e) {
-      // Demo mode
-      const newLog: ImportLog = {
-        id: Date.now().toString(),
-        fileName: selectedFile?.name || 'unknown.xlsx',
-        uploadedBy: 'admin@company.com',
-        uploadedAt: new Date(),
-        totalRecords: previewData.length,
-        successCount: previewData.filter(r => r._valid && !r._isDuplicate).length,
-        failedCount: previewData.filter(r => !r._valid).length,
-        duplicateCount: previewData.filter(r => r._isDuplicate).length,
-        status: 'SUCCESS',
-      }
-      setImportLogs(prev => [newLog, ...prev])
-      toast({ title: 'Import completed (demo)', description: `${newLog.successCount} records imported.` })
-      clearFile()
+      toast({ title: 'Import failed', description: 'Network error — please try again.', variant: 'destructive' })
     } finally {
       setImporting(false)
     }

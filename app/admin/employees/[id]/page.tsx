@@ -25,6 +25,7 @@ import { useToast } from '@/components/ui/use-toast'
 interface ViewEmployee {
   id: string
   employeeCode: string
+  esslCode: string | null
   firstName: string
   lastName: string
   email: string
@@ -152,6 +153,7 @@ export default function EmployeeDetailPage() {
   const [resetDialogOpen, setResetDialogOpen] = React.useState(false)
   const [tempPassword, setTempPassword] = React.useState('')
   const [resetting, setResetting] = React.useState(false)
+  const [sendingEmail, setSendingEmail] = React.useState(false)
   const [copied, setCopied] = React.useState(false)
   const [loginSessions, setLoginSessions] = React.useState<any[]>([])
   const [loginSummary, setLoginSummary] = React.useState<any>(null)
@@ -264,6 +266,28 @@ export default function EmployeeDetailPage() {
     navigator.clipboard.writeText(tempPassword)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  const handleSendEmail = async () => {
+    if (!tempPassword) return
+    setSendingEmail(true)
+    try {
+      const res = await fetch(`/api/employees/${params.id}/send-credentials`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: tempPassword }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast({ title: 'Success', description: data.message || 'Credentials email sent!' })
+      } else {
+        toast({ title: 'Error', description: data.error || 'Failed to send email', variant: 'destructive' })
+      }
+    } catch (_e) {
+      toast({ title: 'Error', description: 'Failed to send credentials', variant: 'destructive' })
+    } finally {
+      setSendingEmail(false)
+    }
   }
 
   const openEditBalance = (balance: LeaveBalance) => {
@@ -465,6 +489,7 @@ export default function EmployeeDetailPage() {
               </CardHeader>
               <CardContent className="space-y-0">
                 <InfoRow label="Employee Code" value={employee.employeeCode} />
+                <InfoRow label="ESSL Code" value={employee.esslCode || 'Not Mapped'} />
                 <InfoRow label="Department" value={employee.department} icon={Building2} />
                 <InfoRow label="Designation" value={employee.designation} />
                 <InfoRow label="Employment Type" value={employee.employmentType.replace('_', ' ')} />
@@ -865,6 +890,10 @@ export default function EmployeeDetailPage() {
                 </Button>
                 <Button variant="outline" onClick={() => { setTempPassword(''); handleResetPassword() }} className="border-white/10 text-gray-300 hover:text-white hover:bg-white/10">
                   Generate New
+                </Button>
+                <Button onClick={handleSendEmail} disabled={sendingEmail} className="text-white" style={{ background: '#8B5CF6', borderColor: '#8B5CF6' }}>
+                  <Mail className="h-4 w-4 mr-2" />
+                  {sendingEmail ? 'Sending...' : 'Send via Email'}
                 </Button>
               </>
             ) : (

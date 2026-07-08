@@ -2,35 +2,27 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 import bcrypt from 'bcryptjs'
-import crypto from 'crypto'
 import type { Role } from '@/types'
 
 export const dynamic = 'force-dynamic'
-
-// In-memory store for reset tokens (expires in 15 minutes)
-const resetTokens = new Map<string, { employeeId: string; userId: string; expiresAt: number }>()
-
-function cleanupExpiredTokens() {
-  const now = Date.now()
-  for (const [token, data] of resetTokens.entries()) {
-    if (data.expiresAt < now) {
-      resetTokens.delete(token)
-    }
-  }
-}
 
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    cleanupExpiredTokens()
-
     const token = await getToken({ req: request })
     const userRole = token?.role as Role | undefined
 
     if (userRole !== 'ADMIN' && userRole !== 'HR_MANAGER') {
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
+    }
+
+    const body = await request.json().catch(() => ({}))
+    const newPassword = body?.password
+
+    if (!newPassword || newPassword.length < 6) {
+      return NextResponse.json({ success: false, error: 'Password must be at least 6 characters' }, { status: 400 })
     }
 
     const employee = await prisma.employee.findUnique({
@@ -46,34 +38,27 @@ export async function POST(
       return NextResponse.json({ success: false, error: 'User account not found for this employee' }, { status: 404 })
     }
 
-    // Generate a secure reset token
-    const resetToken = crypto.randomBytes(32).toString('base64url')
-    const expiresAt = Date.now() + 15 * 60 * 1000 // 15 minutes
-
-    resetTokens.set(resetToken, {
-      employeeId: params.id,
-      userId: employee.user.id,
-      expiresAt,
+    // Hash and set the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 12)
+    await prisma.user.update({
+      where: { id: employee.user.id },
+      data: { password: hashedPassword },
     })
 
+    // Audit log
     await prisma.auditLog.create({
       data: {
         userId: token?.sub,
         employeeId: params.id,
         module: 'EMPLOYEE',
-        action: 'PASSWORD_RESET_TOKEN',
-        description: `Password reset token generated for employee ${employee.employeeCode}`,
+        action: 'PASSWORD_RESET',
+        description: `Password reset for employee ${employee.employeeCode} by admin`,
       },
-    })
+    }).catch(() => {})
 
-    // In production, send this token via email
-    // For now, return the token to be shared securely through a different channel
     return NextResponse.json({
       success: true,
-      message: 'Password reset token generated. Share the token securely with the employee.',
-      // NOTE: In production, send via email instead of returning in response
-      // The employee should use /api/auth/set-password with this token
-      resetToken,
+      message: `Password updated for ${employee.firstName} ${employee.lastName}`,
     })
   } catch (error) {
     console.error('POST /api/employees/[id]/reset-password error:', error)

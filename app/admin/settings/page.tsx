@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Save, Upload, Mail, ArrowRight } from 'lucide-react'
+import { Save, Upload, Mail, ArrowRight, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,26 +11,141 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/components/ui/use-toast'
 
+interface CompanySettings {
+  companyName: string
+  companyAddress: string
+  phone: string
+  email: string
+  website: string
+  logoUrl: string
+  pan: string
+  tan: string
+  pfNumber: string
+  esiNumber: string
+  salarySlipSignatoryName: string
+  salarySlipSignatoryDesig: string
+  footerText: string
+}
+
+const defaultSettings: CompanySettings = {
+  companyName: '',
+  companyAddress: '',
+  phone: '',
+  email: '',
+  website: '',
+  logoUrl: '',
+  pan: '',
+  tan: '',
+  pfNumber: '',
+  esiNumber: '',
+  salarySlipSignatoryName: '',
+  salarySlipSignatoryDesig: '',
+  footerText: '',
+}
+
 export default function SettingsPage() {
   const { toast } = useToast()
   const [loading, setLoading] = React.useState(false)
+  const [fetching, setFetching] = React.useState(true)
   const [logoPreview, setLogoPreview] = React.useState<string | null>(null)
+  const [settings, setSettings] = React.useState<CompanySettings>(defaultSettings)
+
+  // Fetch settings from database on load
+  React.useEffect(() => {
+    fetchSettings()
+  }, [])
+
+  async function fetchSettings() {
+    setFetching(true)
+    try {
+      const res = await fetch('/api/company-settings')
+      const json = await res.json()
+      if (json.success && json.data) {
+        const d = json.data
+        setSettings({
+          companyName: d.companyName || '',
+          companyAddress: d.companyAddress || '',
+          phone: d.phone || '',
+          email: d.email || '',
+          website: d.website || '',
+          logoUrl: d.logoUrl || '',
+          pan: d.pan || '',
+          tan: d.tan || '',
+          pfNumber: d.pfNumber || '',
+          esiNumber: d.esiNumber || '',
+          salarySlipSignatoryName: d.salarySlipSignatoryName || '',
+          salarySlipSignatoryDesig: d.salarySlipSignatoryDesig || '',
+          footerText: d.footerText || '',
+        })
+        if (d.logoUrl) setLogoPreview(d.logoUrl)
+      }
+    } catch (_e) {
+      toast({ title: 'Error', description: 'Failed to load settings', variant: 'destructive' })
+    } finally {
+      setFetching(false)
+    }
+  }
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
       const reader = new FileReader()
-      reader.onloadend = () => setLogoPreview(reader.result as string)
+      reader.onloadend = () => {
+        const result = reader.result as string
+        setLogoPreview(result)
+        setSettings(s => ({ ...s, logoUrl: result }))
+      }
       reader.readAsDataURL(file)
     }
+  }
+
+  const updateField = (field: keyof CompanySettings, value: string) => {
+    setSettings(s => ({ ...s, [field]: value }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    await new Promise((r) => setTimeout(r, 1000))
-    setLoading(false)
-    toast({ title: 'Success', description: 'Settings saved successfully' })
+    try {
+      const res = await fetch('/api/company-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          companyName: settings.companyName,
+          companyAddress: settings.companyAddress,
+          phone: settings.phone,
+          email: settings.email,
+          website: settings.website,
+          logoUrl: settings.logoUrl,
+          pan: settings.pan,
+          tan: settings.tan,
+          pfNumber: settings.pfNumber,
+          esiNumber: settings.esiNumber,
+          salarySlipSignatoryName: settings.salarySlipSignatoryName,
+          salarySlipSignatoryDesig: settings.salarySlipSignatoryDesig,
+          footerText: settings.footerText,
+        }),
+      })
+      const json = await res.json()
+      if (json.success) {
+        toast({ title: 'Success', description: 'Settings saved successfully' })
+      } else {
+        toast({ title: 'Error', description: json.error || 'Failed to save settings', variant: 'destructive' })
+      }
+    } catch (_e) {
+      toast({ title: 'Error', description: 'Network error — please try again', variant: 'destructive' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (fetching) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+        <span className="ml-2 text-gray-400">Loading settings...</span>
+      </div>
+    )
   }
 
   return (
@@ -71,34 +186,40 @@ export default function SettingsPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="company-name" className="text-gray-300">Company Name</Label>
-              <Input id="company-name" defaultValue="Tech Solutions Pvt. Ltd."
-                className="bg-transparent border-gray-700 text-white placeholder-gray-500" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tagline" className="text-gray-300">Tagline</Label>
-              <Input id="tagline" defaultValue="Empowering businesses with technology"
+              <Input id="company-name" value={settings.companyName}
+                onChange={e => updateField('companyName', e.target.value)}
+                placeholder="Enter company name"
                 className="bg-transparent border-gray-700 text-white placeholder-gray-500" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="address" className="text-gray-300">Address</Label>
-              <Textarea id="address" defaultValue="123, Tech Park, Sector 62, Noida, UP - 201301" rows={3}
+              <Textarea id="address" value={settings.companyAddress}
+                onChange={e => updateField('companyAddress', e.target.value)}
+                placeholder="Enter company address"
+                rows={3}
                 className="bg-transparent border-gray-700 text-white placeholder-gray-500" />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="phone" className="text-gray-300">Phone</Label>
-                <Input id="phone" type="tel" defaultValue="+91-120-456-7890"
+                <Input id="phone" type="tel" value={settings.phone}
+                  onChange={e => updateField('phone', e.target.value)}
+                  placeholder="Enter phone number"
                   className="bg-transparent border-gray-700 text-white placeholder-gray-500" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-gray-300">Email</Label>
-                <Input id="email" type="email" defaultValue="info@techsolutions.com"
+                <Input id="email" type="email" value={settings.email}
+                  onChange={e => updateField('email', e.target.value)}
+                  placeholder="Enter email"
                   className="bg-transparent border-gray-700 text-white placeholder-gray-500" />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="website" className="text-gray-300">Website</Label>
-              <Input id="website" defaultValue="www.techsolutions.com"
+              <Input id="website" value={settings.website}
+                onChange={e => updateField('website', e.target.value)}
+                placeholder="Enter website URL"
                 className="bg-transparent border-gray-700 text-white placeholder-gray-500" />
             </div>
           </CardContent>
@@ -116,7 +237,7 @@ export default function SettingsPage() {
                 <div className="relative">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={logoPreview} alt="Logo preview" className="h-20 w-20 rounded-lg object-contain border border-gray-700" />
-                  <Button size="icon" variant="destructive" className="absolute -top-2 -right-2 h-6 w-6" onClick={() => setLogoPreview(null)}>X</Button>
+                  <Button size="icon" variant="destructive" className="absolute -top-2 -right-2 h-6 w-6" onClick={() => { setLogoPreview(null); setSettings(s => ({ ...s, logoUrl: '' })) }}>X</Button>
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-20 w-20 rounded-lg border-2 border-dashed border-gray-700 bg-transparent">
@@ -146,18 +267,25 @@ export default function SettingsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="signatory-name" className="text-gray-300">Signatory Name</Label>
-                <Input id="signatory-name" defaultValue="Rajesh Kumar"
+                <Input id="signatory-name" value={settings.salarySlipSignatoryName}
+                  onChange={e => updateField('salarySlipSignatoryName', e.target.value)}
+                  placeholder="Enter signatory name"
                   className="bg-transparent border-gray-700 text-white placeholder-gray-500" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="signatory-designation" className="text-gray-300">Designation</Label>
-                <Input id="signatory-designation" defaultValue="Managing Director"
+                <Input id="signatory-designation" value={settings.salarySlipSignatoryDesig}
+                  onChange={e => updateField('salarySlipSignatoryDesig', e.target.value)}
+                  placeholder="Enter designation"
                   className="bg-transparent border-gray-700 text-white placeholder-gray-500" />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="footer-text" className="text-gray-300">Salary Slip Footer Text</Label>
-              <Textarea id="footer-text" defaultValue="This is a computer-generated document and does not require a signature." rows={2}
+              <Textarea id="footer-text" value={settings.footerText}
+                onChange={e => updateField('footerText', e.target.value)}
+                placeholder="Enter footer text"
+                rows={2}
                 className="bg-transparent border-gray-700 text-white placeholder-gray-500" />
             </div>
           </CardContent>
@@ -173,22 +301,32 @@ export default function SettingsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="pan" className="text-gray-300">PAN</Label>
-                <Input id="pan" defaultValue="AABCT1234C" className="uppercase bg-transparent border-gray-700 text-white placeholder-gray-500" />
+                <Input id="pan" value={settings.pan}
+                  onChange={e => updateField('pan', e.target.value)}
+                  placeholder="Enter PAN number"
+                  className="uppercase bg-transparent border-gray-700 text-white placeholder-gray-500" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="tan" className="text-gray-300">TAN</Label>
-                <Input id="tan" defaultValue="DELT12345C" className="uppercase bg-transparent border-gray-700 text-white placeholder-gray-500" />
+                <Input id="tan" value={settings.tan}
+                  onChange={e => updateField('tan', e.target.value)}
+                  placeholder="Enter TAN number"
+                  className="uppercase bg-transparent border-gray-700 text-white placeholder-gray-500" />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="pf-number" className="text-gray-300">PF Number</Label>
-                <Input id="pf-number" defaultValue="DL/12345/1234567"
+                <Input id="pf-number" value={settings.pfNumber}
+                  onChange={e => updateField('pfNumber', e.target.value)}
+                  placeholder="Enter PF number"
                   className="bg-transparent border-gray-700 text-white placeholder-gray-500" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="esi-number" className="text-gray-300">ESI Number</Label>
-                <Input id="esi-number" defaultValue="12-3456-789"
+                <Input id="esi-number" value={settings.esiNumber}
+                  onChange={e => updateField('esiNumber', e.target.value)}
+                  placeholder="Enter ESI number"
                   className="bg-transparent border-gray-700 text-white placeholder-gray-500" />
               </div>
             </div>
@@ -196,9 +334,9 @@ export default function SettingsPage() {
         </Card>
 
         <div className="flex justify-end">
-          <Button type="submit" loading={loading} style={{ background: '#8B5CF6' }} className="hover:bg-opacity-90">
-            <Save className="mr-2 h-4 w-4" />
-            Save Settings
+          <Button type="submit" disabled={loading} style={{ background: '#8B5CF6' }} className="hover:bg-opacity-90 text-white">
+            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            {loading ? 'Saving...' : 'Save Settings'}
           </Button>
         </div>
       </form>

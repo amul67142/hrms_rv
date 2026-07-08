@@ -56,10 +56,12 @@ export async function PATCH(
     // Build update data — only include fields that are provided
     const updateData: Record<string, unknown> = {}
     const allowedFields = [
-      'firstName', 'lastName', 'phone', 'department', 'designation',
-      'employmentType', 'status', 'gender', 'dateOfBirth', 'maritalStatus',
-      'address', 'city', 'state', 'pincode', 'emergencyContact',
-      'emergencyPhone', 'aadhaarNumber', 'bankAccountNumber', 'ifscCode',
+      'employeeCode', 'esslCode', 'firstName', 'lastName', 'fatherName', 'email', 'phone',
+      'department', 'designation', 'employmentType', 'status', 'gender',
+      'dateOfBirth', 'maritalStatus', 'address', 'city', 'state', 'pincode',
+      'emergencyContactName', 'emergencyContactPhone',
+      'panNumber', 'aadhaarNumber', 'pfNumber', 'uanNumber', 'esiNumber',
+      'bankName', 'accountNumber', 'ifscCode',
       'profileCompleted',
     ]
 
@@ -70,8 +72,15 @@ export async function PATCH(
     }
 
     // Handle date fields
-    if (body.dateOfBirth) updateData.dateOfBirth = new Date(body.dateOfBirth)
-    if (body.joiningDate) updateData.joiningDate = new Date(body.joiningDate)
+    if (body.dateOfBirth) {
+      updateData.dateOfBirth = new Date(body.dateOfBirth)
+    } else if (body.dateOfBirth === '' || body.dateOfBirth === null) {
+      updateData.dateOfBirth = null
+    }
+
+    if (body.joiningDate) {
+      updateData.joiningDate = new Date(body.joiningDate)
+    }
 
     // If status changed to INACTIVE/TERMINATED/RESIGNED, set deletedAt
     if (body.status && ['INACTIVE', 'TERMINATED', 'RESIGNED'].includes(body.status)) {
@@ -146,31 +155,48 @@ export async function DELETE(
       return NextResponse.json({ success: false, error: 'Employee not found' }, { status: 404 })
     }
 
+    // --- ADMIN PROTECTION ---
+    // Check if the target employee is an ADMIN
+    const targetUser = await prisma.user.findUnique({
+      where: { employeeId: params.id },
+      select: { role: true },
+    })
+
+    if (targetUser?.role === 'ADMIN') {
+      // Only ADMIN can delete another ADMIN
+      if (role !== 'ADMIN') {
+        return NextResponse.json(
+          { success: false, error: 'Only an Admin can delete another Admin account' },
+          { status: 403 }
+        )
+      }
+
+      // Prevent deleting yourself
+      if (token?.sub && (await prisma.user.findUnique({ where: { id: token.sub as string }, select: { employeeId: true } }))?.employeeId === params.id) {
+        return NextResponse.json(
+          { success: false, error: 'You cannot delete your own Admin account' },
+          { status: 403 }
+        )
+      }
+
+      // Ensure at least one ADMIN remains after deletion
+      const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } })
+      if (adminCount <= 1) {
+        return NextResponse.json(
+          { success: false, error: 'Cannot delete the last Admin. Create a new Admin before deleting this one.' },
+          { status: 403 }
+        )
+      }
+    }
+    // --- END ADMIN PROTECTION ---
+
     if (hard) {
-      // Hard delete — remove all related data in a transaction
+      // Hard delete — database cascade will remove all related data
       await prisma.$transaction(async (tx) => {
-        // Delete ALL related records to avoid FK constraint errors
-        // Timeout increased to 30s — production DB latency causes default 5s to expire
-        await tx.notification.deleteMany({ where: { employeeId: params.id } })
-        await tx.task.deleteMany({ where: { assignedTo: params.id } })
-        await tx.attendance.deleteMany({ where: { employeeId: params.id } })
-        await tx.attendanceRegularization.deleteMany({ where: { employeeId: params.id } })
-        await tx.leaveRequest.deleteMany({ where: { employeeId: params.id } })
-        await tx.leaveBalance.deleteMany({ where: { employeeId: params.id } })
-        await tx.salaryStructure.deleteMany({ where: { employeeId: params.id } })
-        await tx.payrollItem.deleteMany({ where: { employeeId: params.id } })
-        await tx.ticket.deleteMany({ where: { employeeId: params.id } })
-        await tx.reimbursement.deleteMany({ where: { employeeId: params.id } })
-        await tx.resignation.deleteMany({ where: { employeeId: params.id } })
-        await tx.hRLetter.deleteMany({ where: { employeeId: params.id } })
-        await tx.employeeDocument.deleteMany({ where: { employeeId: params.id } })
-        await tx.learningProgress.deleteMany({ where: { employeeId: params.id } })
-        // loginSession uses userId, so find user first
         const users = await tx.user.findMany({ where: { employeeId: params.id }, select: { id: true } })
         if (users.length > 0) {
           await tx.loginSession.deleteMany({ where: { userId: { in: users.map(u => u.id) } } })
         }
-        await tx.auditLog.deleteMany({ where: { employeeId: params.id } })
         await tx.user.deleteMany({ where: { employeeId: params.id } })
         await tx.employee.delete({ where: { id: params.id } })
       }, { timeout: 30000 })

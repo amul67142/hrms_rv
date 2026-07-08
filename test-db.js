@@ -1,32 +1,54 @@
 const { PrismaClient } = require('@prisma/client')
-
-async function testConnection(label, url) {
-  console.log(`\n--- Testing: ${label} ---`)
-  try {
-    const prisma = new PrismaClient({ datasources: { db: { url } } })
-    await prisma.$connect()
-    const user = await prisma.user.findFirst()
-    console.log('SUCCESS! User:', user ? user.email : 'no users yet')
-    await prisma.$disconnect()
-    return true
-  } catch (e) {
-    console.log('FAILED:', e.message.split('\n').slice(0, 3).join(' '))
-    return false
-  }
-}
+const bcrypt = require('bcryptjs')
 
 async function main() {
-  const ok = await testConnection(
-    'Transaction Pooler',
-    'postgresql://postgres.miyirtwumymnjfdshind:RealvibeProd2026@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1'
-  )
+  const p = new PrismaClient()
 
-  if (ok) {
-    await testConnection(
-      'Direct URL',
-      'postgresql://postgres:RealvibeProd2026@db.miyirtwumymnjfdshind.supabase.co:5432/postgres'
-    )
+  // List all users
+  const users = await p.user.findMany({ select: { id: true, email: true, role: true } })
+  console.log('Current users in database:')
+  users.forEach(u => console.log(`  ${u.email} (${u.role})`))
+
+  // Check if care@realvibe.in exists
+  const admin = await p.user.findUnique({ where: { email: 'care@realvibe.in' } })
+  if (!admin) {
+    console.log('\nAdmin care@realvibe.in NOT FOUND. Creating...')
+    const hash = await bcrypt.hash('123456', 12)
+    const emp = await p.employee.create({
+      data: {
+        employeeCode: 'EMP-ADMIN',
+        firstName: 'Admin',
+        lastName: 'Realvibe',
+        email: 'care@realvibe.in',
+        department: 'Management',
+        designation: 'Administrator',
+        joiningDate: new Date(),
+        employmentType: 'FULL_TIME',
+        status: 'ACTIVE',
+        profileCompleted: true,
+      },
+    })
+    await p.user.create({
+      data: {
+        email: 'care@realvibe.in',
+        password: hash,
+        role: 'ADMIN',
+        employeeId: emp.id,
+      },
+    })
+    console.log('Admin created: care@realvibe.in / 123456')
+  } else {
+    console.log(`\nAdmin found: ${admin.email} (${admin.role})`)
+    const match = await bcrypt.compare('123456', admin.password)
+    console.log(`Password '123456' matches: ${match}`)
+    if (!match) {
+      const hash = await bcrypt.hash('123456', 12)
+      await p.user.update({ where: { email: 'care@realvibe.in' }, data: { password: hash } })
+      console.log('Password reset to 123456')
+    }
   }
+
+  await p.$disconnect()
 }
 
-main()
+main().catch(console.error)

@@ -5,6 +5,7 @@ import { z } from 'zod'
 import type { Role } from '@/types'
 import { differenceInCalendarDays } from 'date-fns'
 import { calculateLeaveDays } from '@/lib/services/leave-utils'
+import { sendLeaveApplicationEmail } from '@/lib/services/mail'
 
 export const dynamic = 'force-dynamic'
 
@@ -221,6 +222,31 @@ export async function POST(request: NextRequest) {
         newValue: JSON.stringify({ leaveRequestId: result.id, leaveType: data.leaveType, totalDays }),
       },
     })
+
+    // Fetch Admins and HR Managers to send them an email
+    try {
+      const admins = await prisma.user.findMany({
+        where: {
+          role: { in: ['ADMIN', 'HR_MANAGER'] },
+        },
+        select: { email: true },
+      })
+      const adminEmails = admins.map((a) => a.email).filter(Boolean)
+      if (adminEmails.length > 0) {
+        const employeeName = `${result.employee.firstName || ''} ${result.employee.lastName || ''}`.trim() || result.employee.employeeCode
+        sendLeaveApplicationEmail(
+          adminEmails,
+          employeeName,
+          data.leaveType,
+          startDate.toISOString().split('T')[0],
+          endDate.toISOString().split('T')[0],
+          totalDays,
+          data.reason
+        ).catch((err) => console.error('Failed to send leave application email to admin:', err))
+      }
+    } catch (mailError) {
+      console.error('Failed to process admin email notification:', mailError)
+    }
 
     return NextResponse.json({ success: true, data: result })
   } catch (error) {

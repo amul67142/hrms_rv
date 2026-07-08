@@ -124,8 +124,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Employee code already exists' }, { status: 400 })
     }
 
-    // Admin sets the password directly — hash it
-    const hashedPassword = await bcrypt.hash(data.password, 12)
+    // Admin sets the password directly — hash it with 10 rounds for performance
+    const hashedPassword = await bcrypt.hash(data.password, 10)
 
     const result = await prisma.$transaction(async (tx) => {
       const employee = await tx.employee.create({
@@ -154,19 +154,19 @@ export async function POST(request: NextRequest) {
       })
 
       const leaveTypes = ['CASUAL', 'SICK'] as const
-      for (const lt of leaveTypes) {
-        await tx.leaveBalance.create({
-          data: {
-            employeeId: employee.id,
-            leaveType: lt,
-            year: new Date().getFullYear(),
-            entitled: lt === 'CASUAL' ? 12 : 12,
-            taken: 0,
-            pending: 0,
-            available: lt === 'CASUAL' ? 12 : 12,
-          },
-        })
-      }
+      const leaveBalances = leaveTypes.map(lt => ({
+        employeeId: employee.id,
+        leaveType: lt,
+        year: new Date().getFullYear(),
+        entitled: 12,
+        taken: 0,
+        pending: 0,
+        available: 12,
+      }))
+
+      await tx.leaveBalance.createMany({
+        data: leaveBalances,
+      })
 
 
       return { employee, user }

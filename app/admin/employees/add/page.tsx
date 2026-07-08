@@ -15,6 +15,8 @@ export default function AddEmployeePage() {
   const router = useRouter()
   const { toast } = useToast()
   const [submitting, setSubmitting] = React.useState(false)
+  const [departments, setDepartments] = React.useState<{ id: string; name: string }[]>([])
+  const [loadingDepartments, setLoadingDepartments] = React.useState(true)
   const [formData, setFormData] = React.useState({
     firstName: '',
     lastName: '',
@@ -28,6 +30,23 @@ export default function AddEmployeePage() {
     status: 'ACTIVE',
     role: 'EMPLOYEE',
   })
+
+  React.useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const res = await fetch('/api/departments')
+        const json = await res.json()
+        if (json.success && Array.isArray(json.data)) {
+          setDepartments(json.data)
+        }
+      } catch (e) {
+        console.error('Failed to load departments:', e)
+      } finally {
+        setLoadingDepartments(false)
+      }
+    }
+    fetchDepartments()
+  }, [])
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -114,7 +133,18 @@ export default function AddEmployeePage() {
               </div>
               <div>
                 <Label className="text-gray-300">Department *</Label>
-                <Input className="mt-1 border-white/10 bg-white/5 text-white" value={formData.department} onChange={(e) => handleChange('department', e.target.value)} required placeholder="Engineering" />
+                <Select value={formData.department} onValueChange={(v) => handleChange('department', v)}>
+                  <SelectTrigger className="mt-1 border-white/10 bg-white/5 text-white">
+                    <SelectValue placeholder={loadingDepartments ? 'Loading...' : 'Select department'} />
+                  </SelectTrigger>
+                  <SelectContent style={{ background: '#1A1A1A' }}>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.name} className="text-white hover:bg-white/10">
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

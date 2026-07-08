@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { CheckCircle2, XCircle, Calendar, BarChart3, GitBranch, Settings2, TrendingUp } from 'lucide-react'
+import { CheckCircle2, XCircle, Calendar, BarChart3, GitBranch, Settings2, TrendingUp, Loader2, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -61,6 +61,16 @@ export default function LeavePage() {
   const [remarks, setRemarks] = React.useState('')
   const [actionLoading, setActionLoading] = React.useState(false)
 
+  // Leave balance for selected employee in dialog
+  const [dialogBalance, setDialogBalance] = React.useState<{
+    loading: boolean
+    balances: { leaveType: string; entitled: number; available: number; pending: number; taken: number }[]
+  }>({ loading: false, balances: [] })
+
+  // Cached leave balances for table display
+  const [balanceMap, setBalanceMap] = React.useState<Record<string, Record<string, { available: number; pending: number; entitled: number; taken: number }>>>({})
+  const [balanceLoading, setBalanceLoading] = React.useState(false)
+
   // Carry-forward settings
   const [carryForwardOpen, setCarryForwardOpen] = React.useState(false)
   const [carryForwardConfig, setCarryForwardConfig] = React.useState<CarryForwardConfig[]>([
@@ -89,9 +99,46 @@ export default function LeavePage() {
     }
   }, [toast])
 
+  // Fetch balances for all employees in leave requests
+  const fetchAllBalances = React.useCallback(async (requests: LeaveRequest[]) => {
+    const uniqueEmployeeIds = [...new Set(requests.map((r) => r.employeeId))]
+    if (uniqueEmployeeIds.length === 0) return
+
+    setBalanceLoading(true)
+    const newMap: Record<string, Record<string, { available: number; pending: number; entitled: number; taken: number }>> = {}
+
+    await Promise.all(
+      uniqueEmployeeIds.map(async (empId) => {
+        try {
+          const res = await fetch(`/api/leave/balance/${empId}`)
+          const json = await res.json()
+          if (json.success && json.data?.balances) {
+            const typeMap: Record<string, { available: number; pending: number; entitled: number; taken: number }> = {}
+            for (const b of json.data.balances) {
+              typeMap[b.leaveType] = { available: b.available, pending: b.pending, entitled: b.entitled, taken: b.taken }
+            }
+            newMap[empId] = typeMap
+          }
+        } catch {
+          // ignore individual failures
+        }
+      })
+    )
+
+    setBalanceMap(newMap)
+    setBalanceLoading(false)
+  }, [])
+
   React.useEffect(() => {
     fetchLeaveRequests()
   }, [fetchLeaveRequests])
+
+  // Fetch balances whenever leave requests change
+  React.useEffect(() => {
+    if (leaveRequests.length > 0) {
+      fetchAllBalances(leaveRequests)
+    }
+  }, [leaveRequests, fetchAllBalances])
 
   const pending = leaveRequests.filter((r) => r.status === 'PENDING')
   const approved = leaveRequests.filter((r) => r.status === 'APPROVED')
@@ -263,6 +310,46 @@ export default function LeavePage() {
       ),
     },
     {
+      key: 'balance',
+      header: 'Remaining',
+      render: (row) => {
+        const isUnlimited = row.leaveType === 'UNPAID' || row.leaveType === 'COMPENSATORY'
+        if (isUnlimited) {
+          return <span className="text-xs" style={{ color: '#6B7280' }}>N/A</span>
+        }
+        const empBal = balanceMap[row.employeeId]
+        if (!empBal) {
+          return balanceLoading
+            ? <Loader2 className="h-3 w-3 animate-spin" style={{ color: '#6B7280' }} />
+            : <span className="text-xs" style={{ color: '#6B7280' }}>—</span>
+        }
+        const typeBal = empBal[row.leaveType]
+        if (!typeBal) {
+          return <span className="text-xs" style={{ color: '#6B7280' }}>—</span>
+        }
+        const remaining = typeBal.available - typeBal.pending
+        const isZero = remaining <= 0
+        const isLow = remaining > 0 && remaining <= 2
+        const color = isZero ? '#EF4444' : isLow ? '#F59E0B' : '#4ADE80'
+        return (
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold" style={{ color }}>
+              {remaining} <span className="text-xs font-normal" style={{ color: '#6B7280' }}>/ {typeBal.entitled}</span>
+            </span>
+            <div className="w-16 h-1 rounded-full mt-1" style={{ background: '#2D2D2D' }}>
+              <div
+                className="h-full rounded-full"
+                style={{
+                  width: `${typeBal.entitled > 0 ? Math.min(((typeBal.taken + typeBal.pending) / typeBal.entitled) * 100, 100) : 0}%`,
+                  background: color,
+                }}
+              />
+            </div>
+          </div>
+        )
+      },
+    },
+    {
       key: 'appliedAt',
       header: 'Applied On',
       render: (row) => (
@@ -288,6 +375,7 @@ export default function LeavePage() {
                   setSelectedRequest(row)
                   setActionType('approve')
                   setActionDialogOpen(true)
+                  fetchEmployeeBalance(row.employeeId)
                 }}
               >
                 <CheckCircle2 className="h-4 w-4" />
@@ -301,6 +389,7 @@ export default function LeavePage() {
                   setSelectedRequest(row)
                   setActionType('reject')
                   setActionDialogOpen(true)
+                  fetchEmployeeBalance(row.employeeId)
                 }}
               >
                 <XCircle className="h-4 w-4" />
@@ -311,6 +400,21 @@ export default function LeavePage() {
       ),
     },
   ]
+
+  const fetchEmployeeBalance = async (employeeId: string) => {
+    setDialogBalance({ loading: true, balances: [] })
+    try {
+      const res = await fetch(`/api/leave/balance/${employeeId}`)
+      const json = await res.json()
+      if (json.success && json.data?.balances) {
+        setDialogBalance({ loading: false, balances: json.data.balances })
+      } else {
+        setDialogBalance({ loading: false, balances: [] })
+      }
+    } catch {
+      setDialogBalance({ loading: false, balances: [] })
+    }
+  }
 
   const handleAction = async () => {
     if (!selectedRequest) return
@@ -687,6 +791,97 @@ export default function LeavePage() {
                 : `Reject leave request from ${selectedRequest?.employee?.firstName} ${selectedRequest?.employee?.lastName}?`}
             </DialogDescription>
           </DialogHeader>
+
+          {/* Leave Balance Section */}
+          {selectedRequest && (
+            <div
+              className="rounded-lg p-4 space-y-3"
+              style={{ background: '#0F0F0F', border: '1px solid #2D2D2D' }}
+            >
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" style={{ color: '#8B5CF6' }} />
+                <span className="text-sm font-semibold text-white">Leave Balance</span>
+                <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: '#2D2D2D', color: '#9CA3AF' }}>
+                  {selectedRequest.employee?.firstName} {selectedRequest.employee?.lastName}
+                </span>
+              </div>
+
+              {dialogBalance.loading ? (
+                <div className="flex items-center gap-2 py-3">
+                  <Loader2 className="h-4 w-4 animate-spin" style={{ color: '#8B5CF6' }} />
+                  <span className="text-sm" style={{ color: '#9CA3AF' }}>Loading leave balance…</span>
+                </div>
+              ) : dialogBalance.balances.length > 0 ? (
+                <div className="space-y-2">
+                  {dialogBalance.balances
+                    .filter((b) => !['UNPAID', 'COMPENSATORY'].includes(b.leaveType))
+                    .map((b) => {
+                      const isCurrentType = b.leaveType === selectedRequest.leaveType
+                      const remaining = b.available - b.pending
+                      const isLow = remaining <= 2 && remaining > 0
+                      const isZero = remaining <= 0
+                      const usedPercent = b.entitled > 0 ? Math.min(((b.taken + b.pending) / b.entitled) * 100, 100) : 0
+
+                      return (
+                        <div
+                          key={b.leaveType}
+                          className="rounded-md p-2.5 transition-all"
+                          style={{
+                            background: isCurrentType ? 'rgba(139,92,246,0.12)' : '#1A1A1A',
+                            border: isCurrentType ? '1px solid rgba(139,92,246,0.4)' : '1px solid #2D2D2D',
+                          }}
+                        >
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-medium" style={{ color: isCurrentType ? '#C4B5FD' : '#D1D5DB' }}>
+                                {b.leaveType.replace('_', ' ')}
+                              </span>
+                              {isCurrentType && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: '#8B5CF6', color: '#fff' }}>
+                                  Requested
+                                </span>
+                              )}
+                              {isCurrentType && isZero && (
+                                <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: 'rgba(239,68,68,0.2)', color: '#F87171' }}>
+                                  <AlertTriangle className="w-2.5 h-2.5" />
+                                  No balance
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 text-[11px]" style={{ color: '#9CA3AF' }}>
+                              <span>Entitled: <strong className="text-white">{b.entitled}</strong></span>
+                              <span>Taken: <strong style={{ color: '#F87171' }}>{b.taken}</strong></span>
+                              <span>Pending: <strong style={{ color: '#FBBF24' }}>{b.pending}</strong></span>
+                            </div>
+                          </div>
+                          {/* Progress bar */}
+                          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: '#2D2D2D' }}>
+                            <div
+                              className="h-full rounded-full transition-all"
+                              style={{
+                                width: `${usedPercent}%`,
+                                background: isZero ? '#EF4444' : isLow ? '#F59E0B' : '#8B5CF6',
+                              }}
+                            />
+                          </div>
+                          <div className="flex justify-between mt-1">
+                            <span className="text-[10px]" style={{ color: '#6B7280' }}>
+                              {usedPercent.toFixed(0)}% used
+                            </span>
+                            <span className="text-[11px] font-semibold" style={{ color: isZero ? '#EF4444' : isLow ? '#F59E0B' : '#4ADE80' }}>
+                              {remaining} day{remaining !== 1 ? 's' : ''} remaining
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                </div>
+              ) : (
+                <p className="text-xs py-2" style={{ color: '#6B7280' }}>No leave balance data found for this employee.</p>
+              )}
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="remarks" className="text-white">Remarks (optional)</Label>
             <Textarea

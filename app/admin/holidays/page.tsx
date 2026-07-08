@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Plus, Edit, Trash2 } from 'lucide-react'
+import { Plus, Edit, Trash2, Calendar, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,44 +21,107 @@ import { formatDate } from '@/lib/core/utils'
 interface Holiday {
   id: string
   name: string
-  date: Date
+  date: string | Date
   year: number
-  description: string
+  description: string | null
 }
-
-const mockHolidays: Holiday[] = [
-  { id: '1', name: 'Republic Day', date: new Date('2024-01-26'), year: 2024, description: 'National holiday' },
-  { id: '2', name: 'Holi', date: new Date('2024-03-25'), year: 2024, description: 'Festival of colors' },
-  { id: '3', name: 'Good Friday', date: new Date('2024-03-29'), year: 2024, description: '' },
-  { id: '4', name: 'Independence Day', date: new Date('2024-08-15'), year: 2024, description: 'National holiday' },
-  { id: '5', name: 'Gandhi Jayanti', date: new Date('2024-10-02'), year: 2024, description: '' },
-  { id: '6', name: 'Diwali', date: new Date('2024-11-01'), year: 2024, description: 'Festival of lights' },
-  { id: '7', name: 'Christmas', date: new Date('2024-12-25'), year: 2024, description: '' },
-]
 
 export default function HolidaysPage() {
   const { toast } = useToast()
-  const [holidays, setHolidays] = React.useState(mockHolidays)
+  const [holidays, setHolidays] = React.useState<Holiday[]>([])
+  const [loading, setLoading] = React.useState(true)
+  const [submitting, setSubmitting] = React.useState(false)
+  const [year, setYear] = React.useState(String(new Date().getFullYear()))
+  
   const [dialogOpen, setDialogOpen] = React.useState(false)
   const [editingHoliday, setEditingHoliday] = React.useState<Holiday | null>(null)
   const [formData, setFormData] = React.useState({ name: '', date: '', description: '' })
+  
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
   const [selectedHoliday, setSelectedHoliday] = React.useState<Holiday | null>(null)
 
+  // Fetch holidays from dynamic API
+  const fetchHolidays = React.useCallback(async () => {
+    try {
+      setLoading(true)
+      const res = await fetch(`/api/holidays?year=${year}`)
+      const json = await res.json()
+      if (json.success) {
+        setHolidays(json.data)
+      } else {
+        toast({
+          title: 'Error',
+          description: json.error || 'Failed to load holidays',
+          variant: 'destructive',
+        })
+      }
+    } catch (err: any) {
+      console.error('Fetch holidays error:', err)
+      toast({
+        title: 'Error',
+        description: 'Failed to connect to backend service',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoading(false)
+    }
+  }, [year, toast])
+
+  React.useEffect(() => {
+    fetchHolidays()
+  }, [fetchHolidays])
+
   const columns: Column<Holiday>[] = [
-    { key: 'date', header: 'Date', sortable: true, render: (row) => formatDate(row.date.toString(), 'dd MMM yyyy') },
-    { key: 'name', header: 'Holiday Name', sortable: true },
-    { key: 'description', header: 'Description', render: (row) => row.description || '-' },
+    {
+      key: 'date',
+      header: 'Date',
+      sortable: true,
+      className: 'text-white font-medium',
+      render: (row) => formatDate(row.date, 'dd MMM yyyy'),
+    },
+    {
+      key: 'name',
+      header: 'Holiday Name',
+      sortable: true,
+      className: 'text-white font-semibold',
+    },
+    {
+      key: 'description',
+      header: 'Description',
+      className: 'text-gray-400',
+      render: (row) => row.description || '—',
+    },
     {
       key: 'actions',
       header: 'Actions',
-      className: 'w-24',
+      className: 'w-24 text-right',
       render: (row) => (
-        <div className="flex items-center gap-1">
-          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { setEditingHoliday(row); setFormData({ name: row.name, date: new Date(row.date).toISOString().split('T')[0], description: row.description }); setDialogOpen(true) }}>
+        <div className="flex items-center gap-1 justify-end">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 text-gray-400 hover:text-white hover:bg-white/5"
+            onClick={() => {
+              setEditingHoliday(row)
+              setFormData({
+                name: row.name,
+                date: new Date(row.date).toISOString().split('T')[0],
+                description: row.description || '',
+              })
+              setDialogOpen(true)
+            }}
+          >
             <Edit className="h-4 w-4" />
           </Button>
-          <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600" onClick={() => { setSelectedHoliday(row); setDeleteDialogOpen(true) }}>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 text-gray-400 hover:text-red-400 hover:bg-red-950/20"
+            onClick={() => {
+              setSelectedHoliday(row)
+              setDeleteDialogOpen(true)
+            }}
+          >
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
@@ -66,80 +129,257 @@ export default function HolidaysPage() {
     },
   ]
 
-  const handleSubmit = () => {
-    if (editingHoliday) {
-      setHolidays(holidays.map(h => h.id === editingHoliday.id ? { ...h, name: formData.name, date: new Date(formData.date), description: formData.description } : h))
-      toast({ title: 'Updated', description: 'Holiday updated successfully' })
-    } else {
-      const newHoliday: Holiday = { id: String(Date.now()), name: formData.name, date: new Date(formData.date), year: new Date(formData.date).getFullYear(), description: formData.description }
-      setHolidays([...holidays, newHoliday])
-      toast({ title: 'Created', description: 'Holiday added successfully' })
+  const handleSubmit = async () => {
+    if (!formData.name.trim() || !formData.date) {
+      toast({
+        title: 'Validation Error',
+        description: 'Name and date are required fields.',
+        variant: 'destructive',
+      })
+      return
     }
-    setDialogOpen(false)
-    setEditingHoliday(null)
-    setFormData({ name: '', date: '', description: '' })
+
+    setSubmitting(true)
+    try {
+      const url = editingHoliday ? `/api/holidays/${editingHoliday.id}` : '/api/holidays'
+      const method = editingHoliday ? 'PUT' : 'POST'
+      
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name.trim(),
+          date: formData.date,
+          description: formData.description.trim() || undefined,
+        }),
+      })
+
+      const json = await res.json()
+      if (json.success) {
+        toast({
+          title: 'Success',
+          description: `Holiday ${editingHoliday ? 'updated' : 'added'} successfully`,
+        })
+        setDialogOpen(false)
+        setEditingHoliday(null)
+        setFormData({ name: '', date: '', description: '' })
+        fetchHolidays()
+      } else {
+        toast({
+          title: 'Error',
+          description: json.error || 'Failed to submit holiday details',
+          variant: 'destructive',
+        })
+      }
+    } catch (err: any) {
+      console.error('Submit holiday error:', err)
+      toast({
+        title: 'Error',
+        description: 'Failed to process transaction',
+        variant: 'destructive',
+      })
+    } finally {
+      setSubmitting(false)
+    }
   }
 
-  const handleDelete = () => {
-    setHolidays(holidays.filter(h => h.id !== selectedHoliday?.id))
-    toast({ title: 'Deleted', description: 'Holiday deleted successfully' })
-    setDeleteDialogOpen(false)
-    setSelectedHoliday(null)
+  const handleDelete = async () => {
+    if (!selectedHoliday) return
+
+    try {
+      const res = await fetch(`/api/holidays/${selectedHoliday.id}`, {
+        method: 'DELETE',
+      })
+      const json = await res.json()
+      if (json.success) {
+        toast({
+          title: 'Deleted',
+          description: 'Holiday deleted successfully',
+        })
+        setDeleteDialogOpen(false)
+        setSelectedHoliday(null)
+        fetchHolidays()
+      } else {
+        toast({
+          title: 'Error',
+          description: json.error || 'Failed to delete holiday',
+          variant: 'destructive',
+        })
+      }
+    } catch (err: any) {
+      console.error('Delete holiday error:', err)
+      toast({
+        title: 'Error',
+        description: 'Failed to complete deletion',
+        variant: 'destructive',
+      })
+    }
   }
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Holidays</h2>
-          <p className="text-sm text-slate-500 mt-1">Manage company holidays</p>
+          <h2 className="text-2xl font-bold text-white">Holidays</h2>
+          <p className="text-sm mt-1" style={{ color: '#9CA3AF' }}>
+            Manage company holidays dynamically
+          </p>
         </div>
-        <Button onClick={() => { setEditingHoliday(null); setFormData({ name: '', date: '', description: '' }); setDialogOpen(true) }}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Holiday
-        </Button>
+        
+        <div className="flex items-center gap-3">
+          {/* Year Filter Select Dropdown */}
+          <select
+            value={year}
+            onChange={(e) => setYear(e.target.value)}
+            className="h-10 px-3 rounded-lg text-sm font-medium transition-colors cursor-pointer outline-none focus:ring-1 focus:ring-[#8B5CF6]"
+            style={{
+              background: '#1A1A1A',
+              color: 'white',
+              borderColor: '#2D2D2D',
+              borderWidth: '1px',
+            }}
+          >
+            {Array.from({ length: 5 }).map((_, i) => {
+              const y = String(new Date().getFullYear() - 2 + i)
+              return (
+                <option key={y} value={y}>
+                  Year {y}
+                </option>
+              )
+            })}
+          </select>
+
+          <Button
+            onClick={() => {
+              setEditingHoliday(null)
+              setFormData({ name: '', date: '', description: '' })
+              setDialogOpen(true)
+            }}
+            className="gap-2"
+            style={{ background: '#8B5CF6' }}
+          >
+            <Plus className="h-4 w-4" />
+            Add Holiday
+          </Button>
+        </div>
       </div>
 
-      <DataTable columns={columns} data={holidays} keyField="id" searchable={false} />
+      {/* Data Table */}
+      <DataTable
+        columns={columns}
+        data={holidays}
+        keyField="id"
+        searchable={false}
+        loading={loading}
+        emptyMessage="No holidays found for this year"
+      />
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent
+          className="rounded-xl border-0 max-w-md"
+          style={{ background: '#1A1A1A', border: '1px solid #2D2D2D' }}
+        >
           <DialogHeader>
-            <DialogTitle>{editingHoliday ? 'Edit Holiday' : 'Add Holiday'}</DialogTitle>
-            <DialogDescription>Enter the holiday details</DialogDescription>
+            <DialogTitle className="text-white text-lg">
+              {editingHoliday ? 'Edit Holiday' : 'Add Holiday'}
+            </DialogTitle>
+            <DialogDescription style={{ color: '#9CA3AF' }}>
+              Enter the company holiday details below.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="holiday-name">Holiday Name</Label>
-              <Input id="holiday-name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g., Republic Day" />
+              <Label htmlFor="holiday-name" className="text-white">
+                Holiday Name <span className="text-red-400">*</span>
+              </Label>
+              <Input
+                id="holiday-name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="e.g., Diwali, Independence Day"
+                style={{ background: '#262626', color: 'white', borderColor: '#2D2D2D' }}
+                disabled={submitting}
+              />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="holiday-date">Date</Label>
-              <Input id="holiday-date" type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} />
+              <Label htmlFor="holiday-date" className="text-white">
+                Date <span className="text-red-400">*</span>
+              </Label>
+              <Input
+                id="holiday-date"
+                type="date"
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                style={{ background: '#262626', color: 'white', borderColor: '#2D2D2D' }}
+                disabled={submitting}
+              />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="holiday-desc">Description</Label>
-              <Textarea id="holiday-desc" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Optional description" rows={2} />
+              <Label htmlFor="holiday-desc" className="text-white">
+                Description
+              </Label>
+              <Textarea
+                id="holiday-desc"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Optional notes or details"
+                rows={3}
+                style={{ background: '#262626', color: 'white', borderColor: '#2D2D2D' }}
+                disabled={submitting}
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSubmit} disabled={!formData.name || !formData.date}>{editingHoliday ? 'Update' : 'Add'}</Button>
+            <Button
+              variant="outline"
+              onClick={() => setDialogOpen(false)}
+              disabled={submitting}
+              style={{ borderColor: '#2D2D2D', color: '#9CA3AF' }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={submitting || !formData.name.trim() || !formData.date}
+              style={{ background: '#8B5CF6' }}
+              className="gap-2"
+            >
+              {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              {editingHoliday ? 'Update' : 'Add'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Delete Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent
+          className="rounded-xl border-0 max-w-sm"
+          style={{ background: '#1A1A1A', border: '1px solid #2D2D2D' }}
+        >
           <DialogHeader>
-            <DialogTitle>Delete Holiday</DialogTitle>
-            <DialogDescription>Are you sure you want to delete &quot;{selectedHoliday?.name}&quot;?</DialogDescription>
+            <DialogTitle className="text-white">Delete Holiday</DialogTitle>
+            <DialogDescription style={{ color: '#9CA3AF' }}>
+              Are you sure you want to delete &quot;{selectedHoliday?.name}&quot;? This action cannot be undone.
+            </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              style={{ borderColor: '#2D2D2D', color: '#9CA3AF' }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              style={{ background: '#EF4444' }}
+            >
+              Delete
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

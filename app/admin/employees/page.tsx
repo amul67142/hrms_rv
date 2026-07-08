@@ -48,6 +48,7 @@ const statusLabel = (s: EmployeeStatus) => STATUS_OPTIONS.find(o => o.value === 
 interface EmployeeRow {
   id: string
   employeeCode: string
+  esslCode: string | null
   firstName: string
   lastName: string
   email: string
@@ -242,6 +243,15 @@ export default function EmployeesPage() {
           <p className="font-medium text-white">{row.firstName} {row.lastName}</p>
           <p className="text-xs text-gray-500">{row.email}</p>
         </div>
+      ),
+    },
+    {
+      key: 'esslCode',
+      header: 'ESSL ID',
+      render: (row: EmployeeRow) => (
+        <span className="font-mono text-xs" style={{ color: row.esslCode ? '#A78BFA' : '#4B5563' }}>
+          {row.esslCode || '\u2014'}
+        </span>
       ),
     },
     {

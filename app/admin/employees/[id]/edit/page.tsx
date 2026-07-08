@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Save, User, Briefcase, FileText, CreditCard, Key } from 'lucide-react'
+import { ArrowLeft, Save, User, Briefcase, FileText, CreditCard, Key, Mail } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,11 +11,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/components/ui/use-toast'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+
 import Link from 'next/link'
 
 interface EditEmployeeData {
   employeeCode: string
+  esslCode: string
   firstName: string
   lastName: string
   fatherName: string
@@ -52,17 +53,36 @@ export default function EditEmployeePage() {
   const { toast } = useToast()
   const [loading, setLoading] = React.useState(true)
   const [submitting, setSubmitting] = React.useState(false)
-  const [resetOpen, setResetOpen] = React.useState(false)
   const [resetting, setResetting] = React.useState(false)
-  const [tempPassword, setTempPassword] = React.useState<string | null>(null)
+  const [sendingEmail, setSendingEmail] = React.useState(false)
+  const [newPassword, setNewPassword] = React.useState('')
+  const [departments, setDepartments] = React.useState<{ id: string; name: string }[]>([])
+  const [loadingDepartments, setLoadingDepartments] = React.useState(true)
   const [formData, setFormData] = React.useState<EditEmployeeData>({
-    employeeCode: '', firstName: '', lastName: '', fatherName: '', email: '', phone: '', gender: 'MALE',
+    employeeCode: '', esslCode: '', firstName: '', lastName: '', fatherName: '', email: '', phone: '', gender: 'MALE',
     dateOfBirth: '', department: '', designation: '', employmentType: 'FULL_TIME',
     joiningDate: '', status: 'ACTIVE', panNumber: '', aadhaarNumber: '', pfNumber: '',
     uanNumber: '', esiNumber: '', bankName: '', accountNumber: '', ifscCode: '',
     address: '', city: '', state: '', pincode: '', emergencyContactName: '',
     emergencyContactPhone: '', maritalStatus: 'SINGLE', role: 'EMPLOYEE',
   })
+
+  React.useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const res = await fetch('/api/departments')
+        const json = await res.json()
+        if (json.success && Array.isArray(json.data)) {
+          setDepartments(json.data)
+        }
+      } catch (e) {
+        console.error('Failed to load departments:', e)
+      } finally {
+        setLoadingDepartments(false)
+      }
+    }
+    fetchDepartments()
+  }, [])
 
   React.useEffect(() => {
     const fetchEmployee = async () => {
@@ -73,6 +93,7 @@ export default function EditEmployeePage() {
           const emp = data.data
           setFormData({
             employeeCode: emp.employeeCode || '',
+            esslCode: emp.esslCode || '',
             firstName: emp.firstName || '',
             lastName: emp.lastName || '',
             fatherName: emp.fatherName || '',
@@ -139,21 +160,55 @@ export default function EditEmployeePage() {
     }
   }
 
-  const handleResetPassword = async () => {
+  const handleSetPassword = async () => {
+    if (!newPassword || newPassword.length < 6) return
     setResetting(true)
     try {
-      const res = await fetch(`/api/employees/${params.id}/reset-password`, { method: 'POST' })
+      const res = await fetch(`/api/employees/${params.id}/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: newPassword }),
+      })
       const data = await res.json()
       if (data.success) {
-        setTempPassword(data.data.tempPassword)
-        toast({ title: 'Success', description: 'Temporary password generated' })
+        toast({ title: 'Success', description: 'Password updated successfully' })
       } else {
-        toast({ title: 'Error', description: data.error || 'Failed to reset password', variant: 'destructive' })
+        toast({ title: 'Error', description: data.error || 'Failed to update password', variant: 'destructive' })
       }
     } catch (_e) {
-      toast({ title: 'Error', description: 'Failed to reset password', variant: 'destructive' })
+      toast({ title: 'Error', description: 'Failed to update password', variant: 'destructive' })
     } finally {
       setResetting(false)
+    }
+  }
+
+  const handleSendCredentials = async () => {
+    if (!newPassword || newPassword.length < 6) return
+    setSendingEmail(true)
+    try {
+      // First update the password
+      await fetch(`/api/employees/${params.id}/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: newPassword }),
+      })
+      // Then send the credentials email
+      const res = await fetch(`/api/employees/${params.id}/send-credentials`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: newPassword }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast({ title: 'Success', description: data.message || 'Credentials email sent!' })
+        setNewPassword('')
+      } else {
+        toast({ title: 'Error', description: data.error || 'Failed to send email', variant: 'destructive' })
+      }
+    } catch (_e) {
+      toast({ title: 'Error', description: 'Failed to send credentials', variant: 'destructive' })
+    } finally {
+      setSendingEmail(false)
     }
   }
 
@@ -208,6 +263,10 @@ export default function EditEmployeePage() {
                   <div>
                     <Label className="text-gray-300">Employee Code</Label>
                     <Input className="mt-1 border-white/10 bg-white/5 text-white" value={formData.employeeCode} onChange={(e) => handleChange('employeeCode', e.target.value)} placeholder="EMP-001" />
+                  </div>
+                  <div>
+                    <Label className="text-gray-300">ESSL Code</Label>
+                    <Input className="mt-1 border-white/10 bg-white/5 text-white" value={formData.esslCode} onChange={(e) => handleChange('esslCode', e.target.value)} placeholder="EMP001" />
                   </div>
                   <div>
                     <Label className="text-gray-300">Email *</Label>
@@ -281,20 +340,43 @@ export default function EditEmployeePage() {
                   <div><Label className="text-gray-300">Contact Phone</Label><Input className="mt-1 border-white/10 bg-white/5 text-white" value={formData.emergencyContactPhone} onChange={(e) => handleChange('emergencyContactPhone', e.target.value)} /></div>
                 </div>
                 <div className="border-t mt-4 pt-4" style={{ borderColor: '#2D2D2D' }}>
-                  <div className="flex items-center justify-between">
+                  <CardTitle className="text-base text-gray-300 mb-3">Account Security</CardTitle>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <CardTitle className="text-base text-gray-300">Account Security</CardTitle>
-                      <p className="text-xs mt-1" style={{ color: '#6B7280' }}>Generate a new temporary password for this employee</p>
+                      <Label className="text-gray-300">Set New Password</Label>
+                      <Input
+                        type="text"
+                        className="mt-1 border-white/10 bg-white/5 text-white"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Enter new password (min 6 chars)"
+                        minLength={6}
+                      />
                     </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => { setTempPassword(null); setResetOpen(true) }}
-                      className="border-white/10 text-gray-300 hover:text-white"
-                    >
-                      <Key className="h-4 w-4 mr-2" /> Reset Password
-                    </Button>
+                    <div className="flex items-end gap-2">
+                      <Button
+                        type="button"
+                        disabled={resetting || !newPassword || newPassword.length < 6}
+                        onClick={handleSetPassword}
+                        className="text-white"
+                        style={{ background: '#8B5CF6' }}
+                      >
+                        <Key className="h-4 w-4 mr-2" />
+                        {resetting ? 'Saving...' : 'Update Password'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={sendingEmail || !newPassword || newPassword.length < 6}
+                        onClick={handleSendCredentials}
+                        className="border-white/10 text-gray-300 hover:text-white"
+                      >
+                        <Mail className="h-4 w-4 mr-2" />
+                        {sendingEmail ? 'Sending...' : 'Send Credentials Email'}
+                      </Button>
+                    </div>
                   </div>
+                  <p className="text-xs mt-2" style={{ color: '#6B7280' }}>Set a password and optionally email the login credentials to the employee.</p>
                 </div>
               </CardContent>
             </Card>
@@ -310,7 +392,18 @@ export default function EditEmployeePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label className="text-gray-300">Department *</Label>
-                    <Input className="mt-1 border-white/10 bg-white/5 text-white" value={formData.department} onChange={(e) => handleChange('department', e.target.value)} required />
+                    <Select value={formData.department} onValueChange={(v) => handleChange('department', v)}>
+                      <SelectTrigger className="mt-1 border-white/10 bg-white/5 text-white">
+                        <SelectValue placeholder={loadingDepartments ? 'Loading...' : 'Select department'} />
+                      </SelectTrigger>
+                      <SelectContent style={{ background: '#1A1A1A' }}>
+                        {departments.map((dept) => (
+                          <SelectItem key={dept.id} value={dept.name} className="text-white hover:bg-white/10">
+                            {dept.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
                     <Label className="text-gray-300">Designation *</Label>
@@ -412,50 +505,6 @@ export default function EditEmployeePage() {
           </Button>
         </div>
       </form>
-
-      {/* Reset Password Dialog */}
-      <Dialog open={resetOpen} onOpenChange={setResetOpen}>
-        <DialogContent className="border-white/10 max-w-md" style={{ background: '#1A1A1A' }}>
-          <DialogHeader>
-            <DialogTitle className="text-white flex items-center gap-2">
-              <Key className="h-4 w-4" style={{ color: '#8B5CF6' }} />
-              Reset Password
-            </DialogTitle>
-          </DialogHeader>
-          {tempPassword ? (
-            <div className="space-y-3 py-2">
-              <p className="text-sm" style={{ color: '#9CA3AF' }}>
-                New temporary password for <strong className="text-white">{formData.firstName} {formData.lastName}</strong>:
-              </p>
-              <div className="p-3 rounded-lg border-2 font-mono text-lg text-center text-white tracking-wider" style={{ borderColor: '#8B5CF6', background: 'rgba(139,92,246,0.1)' }}>
-                {tempPassword}
-              </div>
-              <p className="text-xs" style={{ color: '#6B7280' }}>
-                Share this password securely with the employee. They should change it after logging in.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3 py-2">
-              <p className="text-sm" style={{ color: '#9CA3AF' }}>
-                This will generate a new temporary password for <strong className="text-white">{formData.firstName} {formData.lastName}</strong> ({formData.employeeCode}).
-              </p>
-              <p className="text-xs" style={{ color: '#6B7280' }}>
-                The employee will need to change it after logging in.
-              </p>
-            </div>
-          )}
-          <div className="flex items-center justify-end gap-3">
-            <Button variant="ghost" onClick={() => { setResetOpen(false); setTempPassword(null) }} className="text-gray-400">
-              {tempPassword ? 'Close' : 'Cancel'}
-            </Button>
-            {!tempPassword && (
-              <Button onClick={handleResetPassword} disabled={resetting} className="text-white" style={{ background: '#8B5CF6', borderColor: '#8B5CF6' }}>
-                {resetting ? 'Generating...' : 'Generate Password'}
-              </Button>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

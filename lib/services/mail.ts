@@ -103,6 +103,44 @@ export async function sendLeaveApprovalEmail(
   })
 }
 
+export async function sendLeaveApplicationEmail(
+  adminEmails: string[],
+  employeeName: string,
+  leaveType: string,
+  fromDate: string,
+  toDate: string,
+  totalDays: number,
+  reason?: string
+) {
+  const content = `
+    <h2 style="color:#FFFFFF;margin-bottom:20px;">New Leave Request Pending Approval</h2>
+    <p style="color:#9CA3AF;margin-bottom:8px;">Hello,</p>
+    <p style="color:#9CA3AF;"><strong style="color:#FFFFFF;">${employeeName}</strong> has submitted a new leave request that is pending review.</p>
+    <div style="background:#262626;border-radius:12px;padding:20px;margin:20px 0;">
+      <table style="width:100%;border-collapse:collapse;">
+        <tr><td style="color:#9CA3AF;padding:8px 0;border-bottom:1px solid #2D2D2D;">Employee Name</td><td style="color:#FFFFFF;text-align:right;padding:8px 0;border-bottom:1px solid #2D2D2D;">${employeeName}</td></tr>
+        <tr><td style="color:#9CA3AF;padding:8px 0;border-bottom:1px solid #2D2D2D;">Leave Type</td><td style="color:#FFFFFF;text-align:right;padding:8px 0;border-bottom:1px solid #2D2D2D;">${leaveType}</td></tr>
+        <tr><td style="color:#9CA3AF;padding:8px 0;border-bottom:1px solid #2D2D2D;">From Date</td><td style="color:#FFFFFF;text-align:right;padding:8px 0;border-bottom:1px solid #2D2D2D;">${fromDate}</td></tr>
+        <tr><td style="color:#9CA3AF;padding:8px 0;border-bottom:1px solid #2D2D2D;">To Date</td><td style="color:#FFFFFF;text-align:right;padding:8px 0;border-bottom:1px solid #2D2D2D;">${toDate}</td></tr>
+        <tr><td style="color:#9CA3AF;padding:8px 0;border-bottom:1px solid #2D2D2D;">Total Days</td><td style="color:#FFFFFF;text-align:right;padding:8px 0;border-bottom:1px solid #2D2D2D;">${totalDays} day${totalDays !== 1 ? 's' : ''}</td></tr>
+        ${reason ? `<tr><td style="color:#9CA3AF;padding:8px 0;">Reason</td><td style="color:#FFFFFF;text-align:right;padding:8px 0;">${reason}</td></tr>` : ''}
+      </table>
+    </div>
+    <p style="color:#9CA3AF;font-size:13px;">Log in to the Admin/HRM portal to review and take action on this request.</p>
+  `
+  const results = await Promise.all(
+    adminEmails.map(email =>
+      sendMail({
+        to: email,
+        subject: `New Leave Request: ${employeeName} - ${leaveType}`,
+        html: generateEmailTemplate(content),
+      })
+    )
+  )
+  return results.filter(Boolean).length
+}
+
+
 export async function sendReimbursementApprovalEmail(
   employeeEmail: string,
   employeeName: string,

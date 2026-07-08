@@ -1,10 +1,10 @@
 'use client'
 
 import * as React from 'react'
-import { FileText, Download, Lock, Unlock, Play } from 'lucide-react'
+import { FileText, Download, Lock, Play, Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { DataTable, Column } from '@/components/data-table'
 import { useToast } from '@/components/ui/use-toast'
@@ -23,12 +23,6 @@ const statusColors: Record<PayrollStatus, string> = {
 interface PayrollRow extends PayrollItem {
   employee: Employee
 }
-
-const mockPayroll: PayrollRow[] = [
-  { id: '1', employeeId: '1', month: 4, year: 2024, basicSalary: 50000, hra: 15000, conveyanceAllowance: 2000, medicalAllowance: 5000, specialAllowance: 8000, otherAllowance: 3000, bonus: 0, incentives: 0, grossSalary: 83000, pfDeduction: 1800, esiDeduction: 0, professionalTax: 200, tdsDeduction: 0, otherDeduction: 0, totalDeduction: 2000, netSalary: 81000, paidDays: 22, status: 'PAID', createdAt: new Date(), updatedAt: new Date(), employee: { id: '1', employeeCode: 'EMP001', firstName: 'Rahul', lastName: 'Sharma', email: 'rahul@example.com', department: 'Engineering', designation: 'Software Engineer', joiningDate: new Date(), employmentType: 'FULL_TIME', status: 'ACTIVE', createdAt: new Date(), updatedAt: new Date() } },
-  { id: '2', employeeId: '2', month: 4, year: 2024, basicSalary: 60000, hra: 18000, conveyanceAllowance: 2000, medicalAllowance: 5000, specialAllowance: 10000, otherAllowance: 3000, bonus: 0, incentives: 0, grossSalary: 98000, pfDeduction: 1800, esiDeduction: 0, professionalTax: 200, tdsDeduction: 0, otherDeduction: 0, totalDeduction: 2000, netSalary: 96000, paidDays: 22, status: 'CALCULATED', createdAt: new Date(), updatedAt: new Date(), employee: { id: '2', employeeCode: 'EMP002', firstName: 'Priya', lastName: 'Patel', email: 'priya@example.com', department: 'Marketing', designation: 'Marketing Manager', joiningDate: new Date(), employmentType: 'FULL_TIME', status: 'ACTIVE', createdAt: new Date(), updatedAt: new Date() } },
-  { id: '3', employeeId: '3', month: 4, year: 2024, basicSalary: 40000, hra: 12000, conveyanceAllowance: 2000, medicalAllowance: 3000, specialAllowance: 6000, otherAllowance: 2000, bonus: 0, incentives: 0, grossSalary: 65000, pfDeduction: 1800, esiDeduction: 0, professionalTax: 200, tdsDeduction: 0, otherDeduction: 0, totalDeduction: 2000, netSalary: 63000, paidDays: 22, status: 'DRAFT', createdAt: new Date(), updatedAt: new Date(), employee: { id: '3', employeeCode: 'EMP003', firstName: 'Amit', lastName: 'Singh', email: 'amit@example.com', department: 'Finance', designation: 'Accountant', joiningDate: new Date(), employmentType: 'FULL_TIME', status: 'ACTIVE', createdAt: new Date(), updatedAt: new Date() } },
-]
 
 const columns: Column<PayrollRow>[] = [
   {
@@ -60,6 +54,11 @@ const columns: Column<PayrollRow>[] = [
     key: 'netSalary',
     header: 'Net Salary',
     render: (row) => <span className="font-semibold text-white">{formatCurrency(row.netSalary)}</span>,
+  },
+  {
+    key: 'paidDays',
+    header: 'Paid Days',
+    render: (row) => <span className="text-gray-300">{row.paidDays}</span>,
   },
   {
     key: 'status',
@@ -95,16 +94,65 @@ export default function PayrollPage() {
   const currentYear = new Date().getFullYear()
   const [month, setMonth] = React.useState(String(currentMonth))
   const [year, setYear] = React.useState(String(currentYear))
-  const [data, setData] = React.useState(mockPayroll)
+  const [data, setData] = React.useState<PayrollRow[]>([])
+  const [loading, setLoading] = React.useState(true)
+  const [generating, setGenerating] = React.useState(false)
+  const [locking, setLocking] = React.useState(false)
 
-  const handleGenerateAll = () => {
-    setData(mockPayroll.map(p => ({ ...p, status: 'CALCULATED' as PayrollStatus })))
-    toast({ title: 'Success', description: 'Payroll generated for all employees' })
+  const fetchPayroll = React.useCallback(async () => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams({ month, year, limit: '100' })
+      const res = await fetch(`/api/payroll?${params}`)
+      const json = await res.json()
+      if (json.success) {
+        setData(json.data || [])
+      }
+    } catch (_e) {
+      toast({ title: 'Error', description: 'Failed to load payroll data', variant: 'destructive' })
+    } finally {
+      setLoading(false)
+    }
+  }, [month, year, toast])
+
+  React.useEffect(() => {
+    fetchPayroll()
+  }, [fetchPayroll])
+
+  const handleGenerateAll = async () => {
+    setGenerating(true)
+    try {
+      const res = await fetch(`/api/payroll/bulk-generate/${month}/${year}`, { method: 'POST' })
+      const json = await res.json()
+      if (json.success) {
+        toast({ title: 'Success', description: json.message || 'Payroll generated for all employees' })
+        fetchPayroll()
+      } else {
+        toast({ title: 'Error', description: json.error || 'Failed to generate payroll', variant: 'destructive' })
+      }
+    } catch (_e) {
+      toast({ title: 'Error', description: 'Network error — please try again', variant: 'destructive' })
+    } finally {
+      setGenerating(false)
+    }
   }
 
-  const handleLockMonth = () => {
-    setData(mockPayroll.map(p => ({ ...p, status: 'LOCKED' as PayrollStatus })))
-    toast({ title: 'Locked', description: 'Payroll for this month has been locked' })
+  const handleLockMonth = async () => {
+    setLocking(true)
+    try {
+      const res = await fetch(`/api/payroll/lock/${month}/${year}`, { method: 'POST' })
+      const json = await res.json()
+      if (json.success) {
+        toast({ title: 'Locked', description: json.message || 'Payroll for this month has been locked' })
+        fetchPayroll()
+      } else {
+        toast({ title: 'Error', description: json.error || 'Failed to lock payroll', variant: 'destructive' })
+      }
+    } catch (_e) {
+      toast({ title: 'Error', description: 'Network error — please try again', variant: 'destructive' })
+    } finally {
+      setLocking(false)
+    }
   }
 
   return (
@@ -115,13 +163,16 @@ export default function PayrollPage() {
           <p className="text-sm text-gray-400 mt-1">Monthly payroll management</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleLockMonth}>
-            <Lock className="mr-2 h-4 w-4" />
+          <Button variant="outline" size="sm" onClick={fetchPayroll} disabled={loading}>
+            <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
+          </Button>
+          <Button variant="outline" onClick={handleLockMonth} disabled={locking || data.length === 0}>
+            {locking ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lock className="mr-2 h-4 w-4" />}
             Lock Month
           </Button>
-          <Button onClick={handleGenerateAll}>
-            <Play className="mr-2 h-4 w-4" />
-            Generate Payroll
+          <Button onClick={handleGenerateAll} disabled={generating} style={{ background: '#8B5CF6' }} className="text-white">
+            {generating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
+            {generating ? 'Generating...' : 'Generate Payroll'}
           </Button>
         </div>
       </div>
@@ -177,7 +228,14 @@ export default function PayrollPage() {
         </Card>
       </div>
 
-      <DataTable columns={columns} data={data} keyField="id" searchable={false} />
+      <DataTable
+        columns={columns}
+        data={data}
+        keyField="id"
+        loading={loading}
+        searchable={false}
+        emptyMessage={`No payroll records for ${getMonthName(parseInt(month))} ${year}. Click "Generate Payroll" to calculate salaries based on attendance.`}
+      />
     </div>
   )
 }

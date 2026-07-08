@@ -34,6 +34,32 @@ export async function POST(request: NextRequest) {
           continue
         }
 
+        // --- ADMIN PROTECTION ---
+        const targetUser = await prisma.user.findUnique({
+          where: { employeeId: id },
+          select: { role: true },
+        })
+
+        if (targetUser?.role === 'ADMIN') {
+          if (userRole !== 'ADMIN') {
+            results.push({ id, success: false, error: 'Only an Admin can delete another Admin' })
+            continue
+          }
+          // Prevent deleting yourself
+          const callerUser = await prisma.user.findUnique({ where: { id: token?.sub as string }, select: { employeeId: true } })
+          if (callerUser?.employeeId === id) {
+            results.push({ id, success: false, error: 'You cannot delete your own Admin account' })
+            continue
+          }
+          const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } })
+          const adminsBeingDeleted = ids.filter((delId: string) => delId !== id).length
+          if (adminCount - adminsBeingDeleted <= 0 || adminCount <= 1) {
+            results.push({ id, success: false, error: 'Cannot delete the last Admin. Create a new Admin first.' })
+            continue
+          }
+        }
+        // --- END ADMIN PROTECTION ---
+
         if (hardDelete) {
           if (userRole !== 'ADMIN') {
             results.push({ id, success: false, error: 'Only admins can permanently delete' })
@@ -44,21 +70,6 @@ export async function POST(request: NextRequest) {
             const users = await tx.user.findMany({ where: { employeeId: id }, select: { id: true } })
             const userIds = users.map(u => u.id)
 
-            await tx.notification.deleteMany({ where: { employeeId: id } })
-            await tx.task.deleteMany({ where: { OR: [{ assignedTo: id }, { assignedBy: id }] } })
-            await tx.ticket.deleteMany({ where: { employeeId: id } })
-            await tx.hRLetter.deleteMany({ where: { employeeId: id } })
-            await tx.attendanceRegularization.deleteMany({ where: { employeeId: id } })
-            await tx.employeeDocument.deleteMany({ where: { employeeId: id } })
-            await tx.reimbursement.deleteMany({ where: { employeeId: id } })
-            await tx.resignation.deleteMany({ where: { employeeId: id } })
-            await tx.learningProgress.deleteMany({ where: { employeeId: id } })
-            await tx.attendance.deleteMany({ where: { employeeId: id } })
-            await tx.leaveRequest.deleteMany({ where: { employeeId: id } })
-            await tx.leaveBalance.deleteMany({ where: { employeeId: id } })
-            await tx.salaryStructure.deleteMany({ where: { employeeId: id } })
-            await tx.payrollItem.deleteMany({ where: { employeeId: id } })
-            await tx.auditLog.deleteMany({ where: { employeeId: id } })
             if (userIds.length > 0) {
               await tx.loginSession.deleteMany({ where: { userId: { in: userIds } } })
             }

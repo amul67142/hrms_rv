@@ -561,8 +561,8 @@ function DetailPanel({ employee, allEmployees, onClose, onUpdate }: DetailPanelP
               {editingManager ? (
                 <div className="space-y-3">
                   <Select
-                    value={selectedManagerId}
-                    onValueChange={setSelectedManagerId}
+                    value={selectedManagerId || '__none__'}
+                    onValueChange={(val) => setSelectedManagerId(val === '__none__' ? '' : val)}
                   >
                     <SelectTrigger
                       className="w-full text-sm"
@@ -571,7 +571,7 @@ function DetailPanel({ employee, allEmployees, onClose, onUpdate }: DetailPanelP
                       <SelectValue placeholder="Select a manager..." />
                     </SelectTrigger>
                     <SelectContent style={{ background: '#1E1E1E', borderColor: BORDER }}>
-                      <SelectItem value="" className="text-gray-400 focus:text-white">
+                      <SelectItem value="__none__" className="text-gray-400 focus:text-white">
                         No Manager (Top Level)
                       </SelectItem>
                       {Object.entries(managersByDept).map(([dept, emps]) => (

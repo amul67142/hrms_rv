@@ -2,53 +2,44 @@
 
 import * as React from 'react'
 import Link from 'next/link'
-import { signIn } from '@/lib/core/auth-client'
-import { useRouter } from 'next/navigation'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, CheckCircle2, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
-export default function LoginPage() {
-  const router = useRouter()
+export default function ForgotPasswordPage() {
   const [email, setEmail] = React.useState('')
-  const [password, setPassword] = React.useState('')
   const [loading, setLoading] = React.useState(false)
   const [error, setError] = React.useState('')
+  const [success, setSuccess] = React.useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
+    setSuccess('')
 
     try {
-      // Step 1: Establish NextAuth session
-      const result = await signIn('credentials', {
-        email,
-        password,
-        redirect: false,
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
       })
 
-      if (result?.error) {
-        setError('Invalid email or password')
+      const data = await res.json()
+
+      if (!res.ok) {
+        setError(data?.error || 'Failed to send reset link. Please try again.')
         setLoading(false)
         return
       }
 
-      // Step 2: Redirect based on role
-      const sessionRes = await fetch('/api/auth/session')
-      const sessionData = await sessionRes.json()
-      const role = sessionData?.user?.role || 'EMPLOYEE'
-
-      if (role === 'ADMIN' || role === 'HR_MANAGER') {
-        router.push('/admin/dashboard')
-      } else {
-        router.push('/employee/dashboard')
-      }
-      router.refresh()
+      setSuccess(data?.message || 'If the email exists, a reset link has been sent.')
+      setEmail('')
+      setLoading(false)
     } catch (_e) {
-      setError('An unexpected error occurred. Please try again.')
+      setError('An unexpected error occurred. Please try again later.')
       setLoading(false)
     }
   }
@@ -71,9 +62,9 @@ export default function LoginPage() {
 
       <Card style={{ background: '#1A1A1A', border: '1px solid #2D2D2D' }}>
         <CardHeader className="space-y-1">
-          <CardTitle className="text-xl text-white">Welcome back</CardTitle>
+          <CardTitle className="text-xl text-white">Reset password</CardTitle>
           <CardDescription style={{ color: '#9CA3AF' }}>
-            Sign in to your account to continue
+            We'll email you a link to reset your password.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -86,43 +77,42 @@ export default function LoginPage() {
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-gray-300">Email address</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="name@company.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-              />
-            </div>
+            {success && (
+              <div className="flex items-start gap-2 p-3 rounded-lg text-sm"
+                style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', color: '#4ADE80' }}>
+                <CheckCircle2 className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                <span>{success}</span>
+              </div>
+            )}
 
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-gray-300">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-              />
-            </div>
+            {!success && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-gray-300">Email address</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="name@company.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoComplete="email"
+                  />
+                </div>
 
-            <div className="flex items-center justify-end">
-              <Link href="/forgot-password" className="text-sm font-medium transition-colors hover:text-white" style={{ color: '#8B5CF6' }}>
-                Forgot Password?
+                <Button type="submit" className="w-full mt-2" loading={loading}>
+                  Send reset link
+                </Button>
+              </>
+            )}
+
+            <div className="flex items-center justify-center mt-4">
+              <Link href="/login" className="flex items-center gap-2 text-sm font-medium transition-colors hover:text-white" style={{ color: '#9CA3AF' }}>
+                <ArrowLeft className="h-4 w-4" />
+                <span>Back to Sign In</span>
               </Link>
             </div>
-
-            <Button type="submit" className="w-full" loading={loading}>
-              Sign in
-            </Button>
           </form>
-
         </CardContent>
       </Card>
 
