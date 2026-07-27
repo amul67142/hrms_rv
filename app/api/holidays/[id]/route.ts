@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 import { z } from 'zod'
+import { invalidate } from '@/lib/core/cache'
 import type { Role } from '@/types'
 
 export const dynamic = 'force-dynamic'
@@ -82,6 +83,7 @@ export async function PUT(
       },
     })
 
+    invalidate('holidays:', true)
     return NextResponse.json({ success: true, data: updated })
   } catch (error) {
     console.error('PUT /api/holidays/[id] error:', error)
@@ -118,6 +120,7 @@ export async function DELETE(
       },
     })
 
+    invalidate('holidays:', true)
     return NextResponse.json({ success: true, message: 'Holiday deleted' })
   } catch (error) {
     console.error('DELETE /api/holidays/[id] error:', error)

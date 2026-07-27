@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { apiFetch } from '@/lib/core/fetcher'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -37,7 +38,7 @@ export default function LoginPage() {
       }
 
       // Step 2: Redirect based on role
-      const sessionRes = await fetch('/api/auth/session')
+      const sessionRes = await apiFetch('/api/auth/session')
       const sessionData = await sessionRes.json()
       const role = sessionData?.user?.role || 'EMPLOYEE'
 

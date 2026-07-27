@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { formatDate } from '@/lib/core/utils'
 import Link from 'next/link'
 import type { LeaveRequest, LeaveStatus, LeaveType } from '@/types'
+import { apiFetch } from '@/lib/core/fetcher'
 
 const statusColors: Record<LeaveStatus, 'pending' | 'approved' | 'rejected' | 'cancelled'> = {
   PENDING: 'pending',
@@ -51,10 +52,10 @@ export default function EmployeeLeavePage() {
     setLoading(true)
     try {
       const [requestsRes, balanceRes] = await Promise.all([
-        fetch('/api/leave?limit=100'),
-        fetch('/api/me').then(res => res.json()).then(json => {
+        apiFetch('/api/leave?limit=100'),
+        apiFetch('/api/me').then(res => res.json()).then(json => {
           if (json.success && json.data?.id) {
-            return fetch(`/api/leave/balance/${json.data.id}`)
+            return apiFetch(`/api/leave/balance/${json.data.id}`)
           }
           return null
         }).then(res => res ? res.json() : null).catch(() => null)

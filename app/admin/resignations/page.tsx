@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
 import { formatDate } from '@/lib/core/utils'
+import { apiFetch } from '@/lib/core/fetcher'
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: '#F59E0B',
@@ -63,7 +64,7 @@ export default function AdminResignationsPage() {
 
   const fetchResignations = React.useCallback(async () => {
     try {
-      const res = await fetch('/api/resignations')
+      const res = await apiFetch('/api/resignations')
       const data = await res.json()
       if (data.success) setResignations(data.data)
     } catch (_e) {
@@ -100,7 +101,7 @@ export default function AdminResignationsPage() {
     if (!selectedResignation) return
     setSubmitting(true)
     try {
-      const res = await fetch(`/api/resignations/${selectedResignation.id}`, {
+      const res = await apiFetch(`/api/resignations/${selectedResignation.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: actionType, reviewNotes, actualLastDay }),

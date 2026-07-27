@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { apiFetch } from '@/lib/core/fetcher'
 import {
   FileText,
   Search,
@@ -140,7 +141,7 @@ export default function AdminDocumentsPage() {
       if (statusFilter && statusFilter !== 'ALL') params.set('status', statusFilter)
       if (search) params.set('search', search)
 
-      const res = await fetch(`/api/documents?${params}`)
+      const res = await apiFetch(`/api/documents?${params}`)
       const json = await res.json()
       if (json.success) {
         setDocuments(json.data)
@@ -207,7 +208,7 @@ export default function AdminDocumentsPage() {
   const handleVerify = async (doc: EmployeeDocument) => {
     setActionLoading(doc.id)
     try {
-      const res = await fetch(`/api/documents/${doc.id}`, {
+      const res = await apiFetch(`/api/documents/${doc.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'VERIFIED' }),
@@ -230,7 +231,7 @@ export default function AdminDocumentsPage() {
     if (!rejectingDoc) return
     setRejecting(true)
     try {
-      const res = await fetch(`/api/documents/${rejectingDoc.id}`, {
+      const res = await apiFetch(`/api/documents/${rejectingDoc.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'REJECTED', rejectionNote }),
@@ -255,7 +256,7 @@ export default function AdminDocumentsPage() {
   const handleToggleLock = async (doc: EmployeeDocument) => {
     setActionLoading(doc.id)
     try {
-      const res = await fetch(`/api/documents/${doc.id}`, {
+      const res = await apiFetch(`/api/documents/${doc.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isLocked: !doc.isLocked }),

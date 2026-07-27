@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/components/ui/use-toast'
 import { differenceInDays } from 'date-fns'
 import Link from 'next/link'
+import { apiFetch } from '@/lib/core/fetcher'
 
 interface LeaveBalance {
   leaveType: string
@@ -47,11 +48,11 @@ export default function ApplyLeavePage() {
     const fetchBalances = async () => {
       setBalancesLoading(true)
       try {
-        const meRes = await fetch('/api/me')
+        const meRes = await apiFetch('/api/me')
         const meJson = await meRes.json()
         if (!meJson.success || !meJson.data?.id) return
 
-        const balanceRes = await fetch(`/api/leave/balance/${meJson.data.id}`)
+        const balanceRes = await apiFetch(`/api/leave/balance/${meJson.data.id}`)
         const balanceJson = await balanceRes.json()
         if (balanceJson.success && balanceJson.data?.balances) {
           // Also include UNPAID and COMPENSATORY which have no balance tracking
@@ -92,7 +93,7 @@ export default function ApplyLeavePage() {
 
     setLoading(true)
     try {
-      const res = await fetch('/api/leave', {
+      const res = await apiFetch('/api/leave', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ leaveType, startDate, endDate, reason }),

@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { apiFetch } from '@/lib/core/fetcher'
 import {
   Upload,
   FileText,
@@ -128,7 +129,7 @@ export default function EmployeeDocumentsPage() {
   const fetchDocuments = React.useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/documents?limit=100')
+      const res = await apiFetch('/api/documents?limit=100')
       const json = await res.json()
       if (json.success) {
         setDocuments(json.data)
@@ -187,7 +188,7 @@ export default function EmployeeDocumentsPage() {
       const mimeType = uploadFile.type || 'application/octet-stream'
       const dataUrl = `data:${mimeType};base64,${base64}`
 
-      const res = await fetch('/api/documents', {
+      const res = await apiFetch('/api/documents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -220,7 +221,7 @@ export default function EmployeeDocumentsPage() {
     if (!deletingDoc) return
     setDeleting(true)
     try {
-      const res = await fetch(`/api/documents/${deletingDoc.id}`, { method: 'DELETE' })
+      const res = await apiFetch(`/api/documents/${deletingDoc.id}`, { method: 'DELETE' })
       const json = await res.json()
       if (json.success) {
         toast({ title: 'Document deleted' })

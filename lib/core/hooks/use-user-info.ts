@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { UserInfo } from '@/components/layout/AppSidebar'
+import { fetchJson } from '@/lib/core/fetcher'
 
 export function useUserInfo(defaultRole: string, defaultInitials: string) {
   const [userInfo, setUserInfo] = React.useState<UserInfo | null>(null)
@@ -9,12 +10,10 @@ export function useUserInfo(defaultRole: string, defaultInitials: string) {
   React.useEffect(() => {
     async function loadUser() {
       try {
-        const [sessionRes, meRes] = await Promise.all([
-          fetch('/api/auth/session'),
-          fetch('/api/me'),
+        const [session, me] = await Promise.all([
+          fetchJson<any>('/api/auth/session'),
+          fetchJson<any>('/api/me'),
         ])
-        const session = await sessionRes.json()
-        const me = await meRes.json()
 
         const sessionUser = session?.user
         const employee = me?.success ? me.data : null

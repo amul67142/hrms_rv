@@ -2,15 +2,21 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 import { sendNoticeEmail } from '@/lib/services/mail'
+import { cached, invalidate, TTL } from '@/lib/core/cache'
 
 export const dynamic = 'force-dynamic'
 
+const ANNOUNCEMENTS_CACHE_KEY = 'announcements:active'
+
 export async function GET(_request: NextRequest) {
   try {
-    const announcements = await prisma.announcement.findMany({
-      where: { isActive: true },
-      orderBy: { createdAt: 'desc' },
-    })
+    // Same active list for everyone — cache and invalidate on any write.
+    const announcements = await cached(ANNOUNCEMENTS_CACHE_KEY, TTL.medium, () =>
+      prisma.announcement.findMany({
+        where: { isActive: true },
+        orderBy: { createdAt: 'desc' },
+      })
+    )
     return NextResponse.json({ success: true, data: announcements })
   } catch (error) {
     console.error('GET /api/announcements error:', error)
@@ -60,6 +66,8 @@ export async function POST(request: NextRequest) {
         console.log(`Email sent to ${sent} employees`) // informational only, not a security concern
       }
     }
+
+    invalidate(ANNOUNCEMENTS_CACHE_KEY)
 
     return NextResponse.json({ success: true, data: announcement })
   } catch (error) {

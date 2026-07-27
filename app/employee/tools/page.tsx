@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/use-toast'
+import { apiFetch } from '@/lib/core/fetcher'
 
 const TOOL_TYPES = ['Browser Extension', 'API Key', 'System', 'Credential', 'URL', 'Other'] as const
 
@@ -147,7 +148,7 @@ export default function EmployeeToolsPage() {
   async function fetchTools() {
     setLoading(true)
     try {
-      const res = await fetch('/api/tools')
+      const res = await apiFetch('/api/tools')
       const json = await res.json()
       if (json.success && json.data.length > 0) {
         setData(json.data.filter((t: Tool) => t.isShared))
@@ -158,7 +159,7 @@ export default function EmployeeToolsPage() {
       await Promise.allSettled(
         tools.map(async (tool: Tool) => {
           try {
-            const r = await fetch(`/api/tools/${tool.id}/request`)
+            const r = await apiFetch(`/api/tools/${tool.id}/request`)
             const j = await r.json()
             if (j.success && j.data) {
               statuses[tool.id] = j.data.status
@@ -177,7 +178,7 @@ export default function EmployeeToolsPage() {
   async function handleRequestAccess(tool: Tool) {
     setRequesting(prev => ({ ...prev, [tool.id]: true }))
     try {
-      const res = await fetch(`/api/tools/${tool.id}/request`, { method: 'POST' })
+      const res = await apiFetch(`/api/tools/${tool.id}/request`, { method: 'POST' })
       const json = await res.json()
       if (json.success) {
         setRequestStatus(prev => ({ ...prev, [tool.id]: 'PENDING' }))

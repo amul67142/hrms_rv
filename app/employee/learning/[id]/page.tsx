@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { useToast } from '@/components/ui/use-toast'
 import Link from 'next/link'
+import { apiFetch } from '@/lib/core/fetcher'
 
 interface LearningModule {
   id: string
@@ -92,7 +93,7 @@ export default function LearningModuleViewerPage() {
   const fetchModule = React.useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/learning/${moduleId}`)
+      const res = await apiFetch(`/api/learning/${moduleId}`)
       const json = await res.json()
       if (json.success && json.data) {
         setModule(json.data)
@@ -106,7 +107,7 @@ export default function LearningModuleViewerPage() {
 
   const fetchProgress = React.useCallback(async () => {
     try {
-      const res = await fetch(`/api/learning/${moduleId}/progress`)
+      const res = await apiFetch(`/api/learning/${moduleId}/progress`)
       const json = await res.json()
       if (json.success && json.data) {
         setProgress({
@@ -129,7 +130,7 @@ export default function LearningModuleViewerPage() {
   async function updateProgress(newProgress: number) {
     const isCompleted = progress.isCompleted || newProgress >= 100
     try {
-      await fetch(`/api/learning/${moduleId}/progress`, {
+      await apiFetch(`/api/learning/${moduleId}/progress`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ progress: newProgress, isCompleted }),
@@ -143,7 +144,7 @@ export default function LearningModuleViewerPage() {
   async function handleMarkComplete() {
     setCompleting(true)
     try {
-      await fetch(`/api/learning/${moduleId}/progress`, {
+      await apiFetch(`/api/learning/${moduleId}/progress`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ progress: 100, isCompleted: true }),

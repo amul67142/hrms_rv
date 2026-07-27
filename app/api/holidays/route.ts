@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 import { z } from 'zod'
+import { cached, invalidate, TTL } from '@/lib/core/cache'
 import type { Role } from '@/types'
 
 export const dynamic = 'force-dynamic'
@@ -19,10 +20,13 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const year = searchParams.get('year') || String(new Date().getFullYear())
 
-    const holidays = await prisma.holiday.findMany({
-      where: { year: parseInt(year) },
-      orderBy: { date: 'asc' },
-    })
+    // Holiday calendar is set once per year and read constantly. Cache per year.
+    const holidays = await cached(`holidays:${year}`, TTL.long, () =>
+      prisma.holiday.findMany({
+        where: { year: parseInt(year) },
+        orderBy: { date: 'asc' },
+      })
+    )
 
     return NextResponse.json({ success: true, data: holidays })
   } catch (error) {
@@ -82,6 +86,8 @@ export async function POST(request: NextRequest) {
         newValue: JSON.stringify({ holidayId: holiday.id, name: data.name, date: data.date }),
       },
     })
+
+    invalidate('holidays:', true)
 
     return NextResponse.json({ success: true, data: holiday })
   } catch (error) {

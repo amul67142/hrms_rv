@@ -14,6 +14,7 @@ import {
   Wrench,
   CheckSquare,
   Headphones,
+  FileBarChart,
 } from 'lucide-react'
 
 const employeeNavItems: NavItem[] = [
@@ -27,6 +28,7 @@ const employeeNavItems: NavItem[] = [
   { label: 'Learning', href: '/employee/learning', icon: GraduationCap },
   { label: 'My Documents', href: '/employee/documents', icon: FileInput },
   { label: 'My Letters', href: '/employee/letters', icon: FileText },
+  { label: 'Monthly Reports', href: '/employee/monthly-reports', icon: FileBarChart },
   { label: 'Helpdesk', href: '/employee/tickets', icon: Headphones },
   { label: 'Resignation', href: '/employee/resignation', icon: UserMinus },
   { label: 'My Profile', href: '/employee/profile', icon: User },

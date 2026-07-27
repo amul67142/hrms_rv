@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/components/ui/use-toast'
+import { apiFetch } from '@/lib/core/fetcher'
 
 interface CompanySettings {
   companyName: string
@@ -58,7 +59,7 @@ export default function SettingsPage() {
   async function fetchSettings() {
     setFetching(true)
     try {
-      const res = await fetch('/api/company-settings')
+      const res = await apiFetch('/api/company-settings')
       const json = await res.json()
       if (json.success && json.data) {
         const d = json.data
@@ -107,7 +108,7 @@ export default function SettingsPage() {
     e.preventDefault()
     setLoading(true)
     try {
-      const res = await fetch('/api/company-settings', {
+      const res = await apiFetch('/api/company-settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

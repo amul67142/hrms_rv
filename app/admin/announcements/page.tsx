@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { apiFetch } from '@/lib/core/fetcher'
 import {
   Dialog,
   DialogContent,
@@ -58,7 +59,7 @@ export default function AnnouncementsPage() {
 
   const fetchAnnouncements = React.useCallback(async () => {
     try {
-      const res = await fetch('/api/announcements')
+      const res = await apiFetch('/api/announcements')
       const json = await res.json()
       if (json.success) setAnnouncements(json.data)
     } catch (_e) {
@@ -79,7 +80,7 @@ export default function AnnouncementsPage() {
     }
     setSubmitting(true)
     try {
-      const res = await fetch('/api/announcements', {
+      const res = await apiFetch('/api/announcements', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
@@ -100,7 +101,7 @@ export default function AnnouncementsPage() {
 
   async function handleDelete(id: string) {
     try {
-      const res = await fetch(`/api/announcements/${id}`, { method: 'DELETE' })
+      const res = await apiFetch(`/api/announcements/${id}`, { method: 'DELETE' })
       const json = await res.json()
       if (json.success) {
         toast({ title: 'Deleted', description: 'Announcement removed' })

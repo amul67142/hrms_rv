@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { formatCurrency } from '@/lib/core/utils'
 import type { AttendanceStatus } from '@/types'
 import { Loader2, LogIn, LogOut } from 'lucide-react'
+import { apiFetch } from '@/lib/core/fetcher'
 
 interface AttendanceDay {
   date: Date
@@ -49,9 +50,9 @@ export default function EmployeeAttendancePage() {
       const monthNum = month.getMonth() + 1
 
       const [attendanceRes, holidaysRes, leaveRes] = await Promise.all([
-        fetch(`/api/attendance?month=${monthNum}&year=${year}&limit=100`),
-        fetch(`/api/holidays?year=${year}`),
-        fetch('/api/leave?status=APPROVED&limit=200')
+        apiFetch(`/api/attendance?month=${monthNum}&year=${year}&limit=100`),
+        apiFetch(`/api/holidays?year=${year}`),
+        apiFetch('/api/leave?status=APPROVED&limit=200')
       ])
 
       const attendanceJson = await attendanceRes.json()

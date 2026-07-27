@@ -11,6 +11,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { formatCurrency, getMonthName } from '@/lib/core/utils'
 import type { PayrollItem, PayrollStatus, Employee } from '@/types'
 import Link from 'next/link'
+import { apiFetch } from '@/lib/core/fetcher'
 
 const statusColors: Record<PayrollStatus, string> = {
   DRAFT: 'secondary',
@@ -103,7 +104,7 @@ export default function PayrollPage() {
     setLoading(true)
     try {
       const params = new URLSearchParams({ month, year, limit: '100' })
-      const res = await fetch(`/api/payroll?${params}`)
+      const res = await apiFetch(`/api/payroll?${params}`)
       const json = await res.json()
       if (json.success) {
         setData(json.data || [])
@@ -122,7 +123,7 @@ export default function PayrollPage() {
   const handleGenerateAll = async () => {
     setGenerating(true)
     try {
-      const res = await fetch(`/api/payroll/bulk-generate/${month}/${year}`, { method: 'POST' })
+      const res = await apiFetch(`/api/payroll/bulk-generate/${month}/${year}`, { method: 'POST' })
       const json = await res.json()
       if (json.success) {
         toast({ title: 'Success', description: json.message || 'Payroll generated for all employees' })
@@ -140,7 +141,7 @@ export default function PayrollPage() {
   const handleLockMonth = async () => {
     setLocking(true)
     try {
-      const res = await fetch(`/api/payroll/lock/${month}/${year}`, { method: 'POST' })
+      const res = await apiFetch(`/api/payroll/lock/${month}/${year}`, { method: 'POST' })
       const json = await res.json()
       if (json.success) {
         toast({ title: 'Locked', description: json.message || 'Payroll for this month has been locked' })

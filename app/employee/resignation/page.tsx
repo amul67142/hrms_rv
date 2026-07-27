@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/components/ui/use-toast'
 import { formatDate } from '@/lib/core/utils'
+import { apiFetch } from '@/lib/core/fetcher'
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: '#F59E0B',
@@ -43,7 +44,7 @@ export default function EmployeeResignationPage() {
 
   const fetchResignation = React.useCallback(async () => {
     try {
-      const res = await fetch('/api/resignations')
+      const res = await apiFetch('/api/resignations')
       const data = await res.json()
       if (data.success && data.data.length > 0) {
         setResignation(data.data[0])
@@ -67,7 +68,7 @@ export default function EmployeeResignationPage() {
     }
     setSubmitting(true)
     try {
-      const res = await fetch('/api/resignations', {
+      const res = await apiFetch('/api/resignations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason, intendedLastDay }),

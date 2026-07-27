@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { useToast } from '@/components/ui/use-toast'
+import { apiFetch } from '@/lib/core/fetcher'
 
 interface SMTPSettings {
   id?: string
@@ -45,7 +46,7 @@ export default function SMTPSettingsPage() {
   const fetchSettings = async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/smtp')
+      const res = await apiFetch('/api/smtp')
       const data = await res.json()
       if (data.success && data.data) {
         setSettings({
@@ -77,7 +78,7 @@ export default function SMTPSettingsPage() {
       if (payload.password === '********' || payload.password === '') {
         payload.password = originalPassword
       }
-      const res = await fetch('/api/smtp', {
+      const res = await apiFetch('/api/smtp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -115,7 +116,7 @@ export default function SMTPSettingsPage() {
       if (payload.password === '********' || payload.password === '') {
         payload.password = originalPassword
       }
-      const saveRes = await fetch('/api/smtp', {
+      const saveRes = await apiFetch('/api/smtp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...payload, enabled: true }),
@@ -128,7 +129,7 @@ export default function SMTPSettingsPage() {
       }
 
       // Send a test email
-      const res = await fetch('/api/smtp/test', {
+      const res = await apiFetch('/api/smtp/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ toEmail: settings.fromEmail }),

@@ -5,6 +5,7 @@ import { Plus, Search, Edit, Trash2, Building2, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { apiFetch } from '@/lib/core/fetcher'
 import {
   Dialog,
   DialogContent,
@@ -52,7 +53,7 @@ export default function DepartmentsPage() {
   async function fetchDepartments() {
     setLoading(true)
     try {
-      const res = await fetch('/api/departments')
+      const res = await apiFetch('/api/departments')
       const json = await res.json()
       if (json.success) setDepartments(json.data)
     } catch (_e) { /* silent */ }
@@ -82,7 +83,7 @@ export default function DepartmentsPage() {
     setError('')
     try {
       const url = editDepartment ? `/api/departments/${editDepartment.id}` : '/api/departments'
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method: editDepartment ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
@@ -102,7 +103,7 @@ export default function DepartmentsPage() {
     if (!departmentToDelete) return
     setSaving(true)
     try {
-      const res = await fetch(`/api/departments/${departmentToDelete.id}`, { method: 'DELETE' })
+      const res = await apiFetch(`/api/departments/${departmentToDelete.id}`, { method: 'DELETE' })
       const json = await res.json()
       if (json.success) {
         setDeleteDialogOpen(false)

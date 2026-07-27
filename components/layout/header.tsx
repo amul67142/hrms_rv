@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { apiFetch } from '@/lib/core/fetcher'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -223,8 +224,8 @@ function SearchPalette({ open, onClose }: { open: boolean; onClose: () => void }
       setLoading(true)
       try {
         const [empRes, deptRes] = await Promise.all([
-          fetch(`/api/employees/list?q=${encodeURIComponent(q)}&limit=5`),
-          fetch(`/api/departments?q=${encodeURIComponent(q)}&limit=5`),
+          apiFetch(`/api/employees/list?q=${encodeURIComponent(q)}&limit=5`),
+          apiFetch(`/api/departments?q=${encodeURIComponent(q)}&limit=5`),
         ])
         const empJson = empRes.ok ? await empRes.json() : null
         const deptJson = deptRes.ok ? await deptRes.json() : null
@@ -634,7 +635,7 @@ export function Header({ title, subtitle, onMenuClick, showSearch = false, userI
 
   const fetchNotifications = React.useCallback(async () => {
     try {
-      const res = await fetch('/api/notifications')
+      const res = await apiFetch('/api/notifications')
       const json = await res.json()
       if (json.success) {
         setNotifications(json.data || [])
@@ -647,14 +648,26 @@ export function Header({ title, subtitle, onMenuClick, showSearch = false, userI
 
   React.useEffect(() => {
     fetchNotifications()
-    const interval = setInterval(fetchNotifications, 30000)
-    return () => clearInterval(interval)
+    // Poll every 60s, but only while the tab is actually visible — no point
+    // hammering the (far-away) DB for a background tab. Refetch immediately
+    // when the user switches back so they never see stale counts.
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') fetchNotifications()
+    }, 60000)
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') fetchNotifications()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [fetchNotifications])
 
   async function markAllRead() {
     setLoading(true)
     try {
-      await fetch('/api/notifications/read-all', { method: 'POST' })
+      await apiFetch('/api/notifications/read-all', { method: 'POST' })
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
       setUnreadCount(0)
     } finally {
@@ -664,7 +677,7 @@ export function Header({ title, subtitle, onMenuClick, showSearch = false, userI
 
   async function markRead(id: string) {
     try {
-      await fetch(`/api/notifications/${id}`, {
+      await apiFetch(`/api/notifications/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isRead: true }),

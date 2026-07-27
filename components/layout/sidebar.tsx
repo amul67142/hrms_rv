@@ -26,6 +26,7 @@ import {
   Mail,
   UserX,
   Ticket,
+  FileBarChart as FileBarChartIcon,
 } from 'lucide-react'
 
 const adminNavGroups: NavGroup[] = [
@@ -57,6 +58,7 @@ const adminNavGroups: NavGroup[] = [
       { label: 'Helpdesk', href: '/admin/tickets', icon: Ticket },
       { label: 'Learning Center', href: '/admin/learning', icon: GraduationCap },
       { label: 'Tools & Credentials', href: '/admin/tools', icon: Key },
+      { label: 'Monthly Reports', href: '/admin/monthly-reports', icon: FileBarChartIcon },
     ],
   },
   {

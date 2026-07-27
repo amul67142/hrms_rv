@@ -6,6 +6,7 @@ import { AlertCircle } from 'lucide-react'
 import { EmployeeSidebar } from './employee-sidebar'
 import { DashboardLayout, PageMeta } from './DashboardLayout'
 import { useUserInfo } from '@/lib/core/hooks/use-user-info'
+import { apiFetch } from '@/lib/core/fetcher'
 
 interface EmployeeLayoutProps {
   children: React.ReactNode
@@ -28,6 +29,7 @@ const employeeDefaultMeta: Record<string, PageMeta> = {
   '/employee/tasks': { title: 'My Tasks', subtitle: 'View and manage your tasks' },
   '/employee/letters': { title: 'My Letters', subtitle: 'View your HR letters and documents' },
   '/employee/tickets': { title: 'Helpdesk', subtitle: 'Submit and track support tickets' },
+  '/employee/monthly-reports': { title: 'Monthly Reports', subtitle: 'Submit your monthly work reports' },
   '/employee/resignation': { title: 'Resignation', subtitle: 'Submit and track your resignation' },
 }
 
@@ -39,7 +41,7 @@ export function EmployeeLayout({ children, pageMeta, getPageMeta }: EmployeeLayo
   const [profileComplete, setProfileComplete] = React.useState<boolean | null>(null)
 
   React.useEffect(() => {
-    fetch('/api/me')
+    apiFetch('/api/me')
       .then(r => r.json())
       .then(d => {
         if (d.success) {

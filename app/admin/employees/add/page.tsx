@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/components/ui/use-toast'
 import Link from 'next/link'
+import { apiFetch } from '@/lib/core/fetcher'
 
 export default function AddEmployeePage() {
   const router = useRouter()
@@ -34,7 +35,7 @@ export default function AddEmployeePage() {
   React.useEffect(() => {
     const fetchDepartments = async () => {
       try {
-        const res = await fetch('/api/departments')
+        const res = await apiFetch('/api/departments')
         const json = await res.json()
         if (json.success && Array.isArray(json.data)) {
           setDepartments(json.data)
@@ -56,7 +57,7 @@ export default function AddEmployeePage() {
     e.preventDefault()
     setSubmitting(true)
     try {
-      const res = await fetch('/api/employees', {
+      const res = await apiFetch('/api/employees', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -65,7 +66,7 @@ export default function AddEmployeePage() {
       if (result.success) {
         // If role is not EMPLOYEE, update it
         if (formData.role !== 'EMPLOYEE' && result.data?.id) {
-          await fetch(`/api/employees/${result.data.id}`, {
+          await apiFetch(`/api/employees/${result.data.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ role: formData.role }),

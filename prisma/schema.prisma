@@ -224,11 +224,18 @@ model Employee {
   tickets                   Ticket[]
   learningRequests          LearningRequest[]
   toolRequests              ToolRequest[]
+  monthlyReports            MonthlyReport[]
+  biometricPunches          BiometricPunch[]
+  deviceUserMaps            DeviceUserMap[]
   user                      User?
 
   @@index([departmentId])
   @@index([department])
   @@index([status])
+  @@index([designation])
+  @@index([createdAt])
+  @@index([deletedAt])
+  @@index([status, createdAt])
   @@map("employees")
 }
 
@@ -261,6 +268,74 @@ model EsslSyncLog {
   createdAt        DateTime  @default(now())
 
   @@map("essl_sync_logs")
+}
+
+model BiometricPunch {
+  id             String    @id @default(cuid())
+  deviceSn       String
+  deviceUserId   String
+  employeeId     String?
+  punchTime      DateTime
+  status         Int       @default(0)
+  statusLabel    String    @default("CHECK_IN")
+  verifyMode     Int       @default(0)
+  verifyLabel    String    @default("PASSWORD")
+  workCode       String?
+  rawLine        String?
+  createdAt      DateTime  @default(now())
+  employee       Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+
+  @@unique([deviceSn, deviceUserId, punchTime])
+  @@index([deviceSn])
+  @@index([employeeId])
+  @@index([punchTime])
+  @@index([createdAt])
+  @@map("biometric_punches")
+}
+
+model DeviceUserMap {
+  id             String    @id @default(cuid())
+  deviceSn       String
+  deviceUserId   String
+  employeeId     String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  employee       Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([deviceSn, deviceUserId])
+  @@index([employeeId])
+  @@map("device_user_maps")
+}
+
+model UnmappedPunch {
+  id             String    @id @default(cuid())
+  deviceSn       String
+  deviceUserId   String
+  punchTime      DateTime
+  status         Int       @default(0)
+  verifyMode     Int       @default(0)
+  rawLine        String?
+  resolved       Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+
+  @@index([deviceSn])
+  @@index([resolved])
+  @@index([createdAt])
+  @@map("unmapped_punches")
+}
+
+model BiometricRawLog {
+  id             String    @id @default(cuid())
+  deviceSn       String?
+  endpoint       String
+  method         String
+  queryParams    String?
+  body           String?
+  createdAt      DateTime  @default(now())
+
+  @@index([deviceSn])
+  @@index([createdAt])
+  @@map("biometric_raw_logs")
 }
 
 model Holiday {
@@ -412,6 +487,8 @@ model Notification {
 
   @@index([employeeId])
   @@index([isRead])
+  @@index([employeeId, createdAt])
+  @@index([employeeId, isRead])
   @@map("notifications")
 }
 
@@ -656,4 +733,30 @@ model User {
   resetTokenExpires DateTime?
 
   @@map("users")
+}
+
+model MonthlyReport {
+  id          String    @id @default(cuid())
+  employeeId  String
+  month       Int
+  year        Int
+  title       String
+  content     String
+  highlights  String?
+  challenges  String?
+  nextMonthPlan String?
+  status      String    @default("SUBMITTED")
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  reviewNotes String?
+  submittedAt DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, month, year])
+  @@index([employeeId])
+  @@index([month, year])
+  @@index([status])
+  @@map("monthly_reports")
 }

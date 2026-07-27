@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
+import { cached, invalidate, TTL } from '@/lib/core/cache'
 
 export const dynamic = 'force-dynamic'
+
+const DEPARTMENTS_CACHE_KEY = 'departments:withCounts'
 
 // GET — list all departments
 export async function GET(request: NextRequest) {
@@ -12,12 +15,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
-    const departments = await prisma.department.findMany({
-      orderBy: { name: 'asc' },
-      include: {
-        _count: { select: { employees: true } },
-      },
-    })
+    // Departments change rarely; cache for 10m and invalidate on write.
+    const departments = await cached(DEPARTMENTS_CACHE_KEY, TTL.long, () =>
+      prisma.department.findMany({
+        orderBy: { name: 'asc' },
+        include: {
+          _count: { select: { employees: true } },
+        },
+      })
+    )
 
     return NextResponse.json({ success: true, data: departments })
   } catch (error) {
@@ -55,6 +61,8 @@ export async function POST(request: NextRequest) {
         description: description?.trim() || null,
       },
     })
+
+    invalidate(DEPARTMENTS_CACHE_KEY)
 
     return NextResponse.json({ success: true, data: department })
   } catch (error) {

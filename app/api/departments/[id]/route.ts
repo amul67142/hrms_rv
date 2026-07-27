@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
+import { invalidate } from '@/lib/core/cache'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,6 +32,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const body = await request.json()
     const { name, code, description, isActive } = body
     const department = await prisma.department.update({ where: { id: params.id }, data: { name, code, description, isActive } })
+    invalidate('departments:withCounts')
     return NextResponse.json({ success: true, data: department })
   } catch (error) {
     console.error('PUT /api/departments/[id] error:', error)
@@ -45,6 +47,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
     await prisma.department.delete({ where: { id: params.id } })
+    invalidate('departments:withCounts')
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('DELETE /api/departments/[id] error:', error)

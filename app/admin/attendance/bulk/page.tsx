@@ -8,6 +8,7 @@ import { FileUpload } from '@/components/file-upload'
 import { ExcelPreview } from '@/components/excel-preview'
 import { useToast } from '@/components/ui/use-toast'
 import Link from 'next/link'
+import { apiFetch } from '@/lib/core/fetcher'
 
 interface PreviewRow {
   row: number
@@ -38,7 +39,7 @@ export default function BulkAttendancePage() {
 
   const handleDownloadTemplate = async () => {
     try {
-      const res = await fetch('/api/attendance/template')
+      const res = await apiFetch('/api/attendance/template')
       const blob = await res.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')

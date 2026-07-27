@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/components/ui/use-toast'
 import { formatCurrency } from '@/lib/core/utils'
 import type { PayrollStatus } from '@/types'
+import { apiFetch } from '@/lib/core/fetcher'
 
 interface SalarySlip {
   id: string
@@ -57,7 +58,7 @@ export default function SalarySlipsPage() {
     const fetchSlips = async () => {
       setLoading(true)
       try {
-        const res = await fetch('/api/salary-slips/me')
+        const res = await apiFetch('/api/salary-slips/me')
         const json = await res.json()
         if (json.success) {
           setSlips(json.data || [])
@@ -106,7 +107,7 @@ export default function SalarySlipsPage() {
   const handleDownload = async (slip: SalarySlip) => {
     setDownloading(slip.id)
     try {
-      const res = await fetch(`/api/salary-slips/${slip.id}?format=pdf`)
+      const res = await apiFetch(`/api/salary-slips/${slip.id}?format=pdf`)
       if (res.ok) {
         const blob = await res.blob()
         const url = URL.createObjectURL(blob)

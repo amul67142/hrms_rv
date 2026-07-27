@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
+import { apiFetch } from '@/lib/core/fetcher'
 import {
   Select,
   SelectContent,
@@ -110,7 +111,7 @@ export default function AddLearningModulePage() {
         isActive: form.isActive,
       }
 
-      const res = await fetch('/api/learning', {
+      const res = await apiFetch('/api/learning', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

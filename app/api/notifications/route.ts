@@ -22,15 +22,18 @@ export async function GET(request: NextRequest) {
         ? { employeeId: null }
         : { employeeId: employeeId ?? undefined }
 
-    const data = await prisma.notification.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-    })
-
-    const unreadCount = await prisma.notification.count({
-      where: { ...where, isRead: false },
-    })
+    // Run both round-trips in parallel instead of sequentially — halves the
+    // cross-region latency of this endpoint (it's polled from the header).
+    const [data, unreadCount] = await Promise.all([
+      prisma.notification.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      }),
+      prisma.notification.count({
+        where: { ...where, isRead: false },
+      }),
+    ])
 
     return NextResponse.json({ success: true, data, unreadCount })
   } catch (error) {

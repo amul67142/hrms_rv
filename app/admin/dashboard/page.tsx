@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
+import { apiFetch } from '@/lib/core/fetcher'
 import {
   Users,
   UserCheck,
@@ -377,8 +378,8 @@ export default function AdminDashboardPage() {
 
       try {
         const [dashRes, todayRes] = await Promise.all([
-          fetch('/api/dashboard'),
-          fetch('/api/attendance/today'),
+          apiFetch('/api/dashboard'),
+          apiFetch('/api/attendance/today'),
         ])
 
         if (!dashRes.ok || !todayRes.ok) {
@@ -402,7 +403,9 @@ export default function AdminDashboardPage() {
 
     fetchAll()
 
-    const pollInterval = setInterval(() => fetchAll(true), REFRESH_INTERVAL)
+    const pollInterval = setInterval(() => {
+      if (document.visibilityState === 'visible') fetchAll(true)
+    }, REFRESH_INTERVAL)
     return () => clearInterval(pollInterval)
   }, [])
 
@@ -410,7 +413,7 @@ export default function AdminDashboardPage() {
   React.useEffect(() => {
     const fetchAuditLogs = async () => {
       try {
-        const res = await fetch('/api/audit-log?limit=10')
+        const res = await apiFetch('/api/audit-log?limit=10')
         if (res.ok) {
           const json = await res.json()
           if (json.success) setAuditLogs(json.data)
@@ -420,7 +423,9 @@ export default function AdminDashboardPage() {
       }
     }
     fetchAuditLogs()
-    const interval = setInterval(fetchAuditLogs, REFRESH_INTERVAL)
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') fetchAuditLogs()
+    }, REFRESH_INTERVAL)
     return () => clearInterval(interval)
   }, [])
 
@@ -429,10 +434,10 @@ export default function AdminDashboardPage() {
     const fetchAlerts = async () => {
       try {
         const [leaveRes, attendanceRes, resignRes, docsRes] = await Promise.all([
-          fetch('/api/leave?status=PENDING&limit=1'),
-          fetch('/api/attendance/today'),
-          fetch('/api/resignations'),
-          fetch('/api/documents?status=PENDING&limit=1'),
+          apiFetch('/api/leave?status=PENDING&limit=1'),
+          apiFetch('/api/attendance/today'),
+          apiFetch('/api/resignations'),
+          apiFetch('/api/documents?status=PENDING&limit=1'),
         ])
 
         const [leaveJson, attendanceJson, resignJson, docsJson] = await Promise.all([
@@ -461,7 +466,9 @@ export default function AdminDashboardPage() {
     }
 
     fetchAlerts()
-    const interval = setInterval(fetchAlerts, REFRESH_INTERVAL)
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') fetchAlerts()
+    }, REFRESH_INTERVAL)
     return () => clearInterval(interval)
   }, [])
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
+import { invalidateEmployeeCaches } from '@/lib/core/cache'
 import type { Role } from '@/types'
 
 export const dynamic = 'force-dynamic'
@@ -105,6 +106,8 @@ export async function POST(request: NextRequest) {
 
     const succeeded = results.filter(r => r.success).length
     const failed = results.filter(r => !r.success).length
+
+    if (succeeded > 0) invalidateEmployeeCaches()
 
     return NextResponse.json({
       success: true,

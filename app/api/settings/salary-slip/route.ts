@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getToken } from '@/lib/core/token'
 import { prisma } from '@/lib/core/db'
+import { cached, invalidate, TTL } from '@/lib/core/cache'
 
 export const dynamic = 'force-dynamic'
+
+const SALARY_SLIP_SETTINGS_KEY = 'settings:salarySlip'
 
 export async function GET(request: NextRequest) {
   try {
     const token = await getToken({ req: request })
     if (!token) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
 
-    const settings = await prisma.companySetting.findFirst({})
-    return NextResponse.json({
-      success: true,
-      data: {
+    const data = await cached(SALARY_SLIP_SETTINGS_KEY, TTL.long, async () => {
+      const settings = await prisma.companySetting.findFirst({})
+      return {
         showWatermark: settings?.salarySlipShowWatermark ?? false,
         watermarkText: settings?.salarySlipWatermarkText ?? '',
         headerText: settings?.salarySlipHeaderText ?? '',
@@ -26,6 +28,8 @@ export async function GET(request: NextRequest) {
         secondSignatoryDesignation: settings?.salarySlipSecondSignatoryDesig ?? '',
       }
     })
+
+    return NextResponse.json({ success: true, data })
   } catch (error) {
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
   }
@@ -80,6 +84,9 @@ export async function PUT(request: NextRequest) {
         data: updateData,
       })
     }
+
+    invalidate(SALARY_SLIP_SETTINGS_KEY)
+    invalidate('company:settings') // same underlying companySetting row
 
     return NextResponse.json({ success: true, message: 'Salary slip settings updated' })
   } catch (error) {

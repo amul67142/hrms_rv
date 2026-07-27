@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 import { z } from 'zod'
+import { invalidate } from '@/lib/core/cache'
 
 export const dynamic = 'force-dynamic'
 
@@ -86,6 +87,7 @@ export async function PUT(
       },
     })
 
+    invalidate('learning:', true)
     return NextResponse.json({ success: true, data: updatedModule })
   } catch (error) {
     console.error('PUT /api/learning/[id] error:', error)
@@ -112,6 +114,7 @@ export async function DELETE(
     }
 
     await prisma.learningModule.delete({ where: { id: params.id } })
+    invalidate('learning:', true)
 
     await prisma.auditLog.create({
       data: {

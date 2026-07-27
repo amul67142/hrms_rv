@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { apiFetch } from '@/lib/core/fetcher'
 import {
   Eye,
   LogOut,
@@ -751,7 +752,7 @@ export default function SessionsPage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/sessions')
+      const res = await apiFetch('/api/sessions')
       if (!res.ok) throw new Error('Failed to fetch sessions')
       const json = await res.json()
       if (json.success && json.data) {
@@ -816,7 +817,7 @@ export default function SessionsPage() {
 
     setForceLogoutId(session.id)
     try {
-      const res = await fetch(`/api/sessions/${session.id}`, { method: 'DELETE' })
+      const res = await apiFetch(`/api/sessions/${session.id}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Failed to logout session')
 
       setSessions((prev) => prev.filter((s) => s.id !== session.id))

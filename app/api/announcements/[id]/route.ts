@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
+import { invalidate } from '@/lib/core/cache'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,6 +42,7 @@ export async function PUT(
       where: { id: params.id },
       data: { title, content, type, priority, isActive },
     })
+    invalidate('announcements:active')
     return NextResponse.json({ success: true, data: updated })
   } catch (error) {
     console.error('PUT /api/announcements/[id] error:', error)
@@ -60,6 +62,7 @@ export async function DELETE(
     }
 
     await prisma.announcement.delete({ where: { id: params.id } })
+    invalidate('announcements:active')
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('DELETE /api/announcements/[id] error:', error)

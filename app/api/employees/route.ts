@@ -3,6 +3,7 @@ import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 import { z } from 'zod'
 import bcrypt from 'bcryptjs'
+import { invalidateEmployeeCaches } from '@/lib/core/cache'
 import type { Role } from '@/types'
 
 export const dynamic = 'force-dynamic'
@@ -204,6 +205,8 @@ export async function POST(request: NextRequest) {
         link: `/admin/employees/${result.employee.id}`,
       },
     }).catch((_e) => { }) // non-blocking
+
+    invalidateEmployeeCaches()
 
     return NextResponse.json({
       success: true,

@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { useToast } from '@/components/ui/use-toast'
 import Link from 'next/link'
+import { apiFetch } from '@/lib/core/fetcher'
 
 const CATEGORIES = ['All', 'IT', 'HR', 'Safety', 'Compliance', 'Leadership', 'Onboarding', 'General'] as const
 const PROGRESS_FILTERS = ['All', 'In Progress', 'Completed'] as const
@@ -116,7 +117,7 @@ export default function EmployeeLearningPage() {
       if (search) params.set('search', search)
       if (categoryFilter !== 'All') params.set('category', categoryFilter)
 
-      const res = await fetch(`/api/learning?${params}`)
+      const res = await apiFetch(`/api/learning?${params}`)
       const json = await res.json()
       if (json.success && json.data.length > 0) {
         setData(json.data.filter((m: LearningModule) => m.isActive))
@@ -130,7 +131,7 @@ export default function EmployeeLearningPage() {
 
   const fetchProgress = React.useCallback(async () => {
     try {
-      const res = await fetch('/api/learning/progress')
+      const res = await apiFetch('/api/learning/progress')
       const json = await res.json()
       if (json.success && json.data.length > 0) {
         const progressMap: Record<string, Progress> = {}

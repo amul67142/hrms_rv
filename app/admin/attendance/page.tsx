@@ -16,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/components/ui/use-toast'
 import { format, parseISO } from 'date-fns'
 import type { AttendanceStatus } from '@/types'
+import { apiFetch } from '@/lib/core/fetcher'
 
 interface AttendanceRecord {
   id: string
@@ -120,7 +121,7 @@ export default function AttendancePage() {
           startDate: selectedDateStart,
           endDate: selectedDateEnd,
         })
-        const res = await fetch(`/api/attendance?${params}`)
+        const res = await apiFetch(`/api/attendance?${params}`)
         const json = await res.json()
         if (json.success) {
           const rows: AttendanceRow[] = (json.data || []).map((record: AttendanceRecord) => ({
@@ -159,7 +160,7 @@ export default function AttendancePage() {
         const year = calendarMonth.getFullYear()
         const month = calendarMonth.getMonth() + 1
         const params = new URLSearchParams({ month: String(month), year: String(year) })
-        const res = await fetch(`/api/attendance?${params}`)
+        const res = await apiFetch(`/api/attendance?${params}`)
         const json = await res.json()
         if (json.success) {
           const data = (json.data || []).map((record: AttendanceRecord) => ({
@@ -170,7 +171,7 @@ export default function AttendancePage() {
         }
 
         // Fetch holidays for the year
-        const holidaysRes = await fetch(`/api/holidays?year=${year}`)
+        const holidaysRes = await apiFetch(`/api/holidays?year=${year}`)
         const holidaysJson = await holidaysRes.json()
         if (holidaysJson.success) {
           setHolidays(holidaysJson.data || [])
@@ -195,7 +196,7 @@ export default function AttendancePage() {
           startDate: start.toISOString().split('T')[0],
           endDate: end.toISOString().split('T')[0],
         })
-        const res = await fetch(`/api/leave?${params}`)
+        const res = await apiFetch(`/api/leave?${params}`)
         const json = await res.json()
         if (json.success) {
           // Flatten leave requests to individual days
@@ -245,7 +246,7 @@ export default function AttendancePage() {
 
       await Promise.all(
         updates.map((data) =>
-          fetch('/api/attendance', {
+          apiFetch('/api/attendance', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
@@ -269,7 +270,7 @@ export default function AttendancePage() {
       const selectedAttendance = attendance.filter((a) => selectedRows.has(a.id))
       await Promise.all(
         selectedAttendance.map((row) =>
-          fetch('/api/attendance', {
+          apiFetch('/api/attendance', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -287,7 +288,7 @@ export default function AttendancePage() {
       setSelectedRows(new Set())
       // Refresh
       const params = new URLSearchParams({ startDate: selectedDateStart, endDate: selectedDateEnd })
-      const res = await fetch(`/api/attendance?${params}`)
+      const res = await apiFetch(`/api/attendance?${params}`)
       const json = await res.json()
       if (json.success) {
         const rows: AttendanceRow[] = (json.data || []).map((record: AttendanceRecord) => ({
@@ -334,7 +335,7 @@ export default function AttendancePage() {
     }
     setRegSubmitting(true)
     try {
-      const res = await fetch('/api/attendance/regularization', {
+      const res = await apiFetch('/api/attendance/regularization', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

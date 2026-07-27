@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/components/ui/use-toast'
 import { formatDate } from '@/lib/core/utils'
+import { apiFetch } from '@/lib/core/fetcher'
 
 function InfoRow({ label, value }: { label: string; value: string | null | undefined }) {
   return (
@@ -58,7 +59,7 @@ export default function EmployeeProfilePage() {
   const [pwd, setPwd] = React.useState({ current: '', next: '', confirm: '' })
 
   const load = React.useCallback(async () => {
-    const res = await fetch('/api/me')
+    const res = await apiFetch('/api/me')
     const d = await res.json()
     if (d.success) setEmp(d.data)
     setLoading(false)
@@ -95,7 +96,7 @@ export default function EmployeeProfilePage() {
     if (form.phone && form.gender && form.dateOfBirth && form.address && form.emergencyContactName && form.emergencyContactPhone) {
       payload.profileCompleted = true
     }
-    const res = await fetch('/api/me', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+    const res = await apiFetch('/api/me', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
     const d = await res.json()
     setSaving(false)
     if (d.success) {
@@ -119,7 +120,7 @@ export default function EmployeeProfilePage() {
       toast({ title: 'Password too short', description: 'Minimum 8 characters', variant: 'destructive' }); return
     }
     setPwdSaving(true)
-    const res = await fetch('/api/me/password', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ currentPassword: pwd.current, newPassword: pwd.next }) })
+    const res = await apiFetch('/api/me/password', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ currentPassword: pwd.current, newPassword: pwd.next }) })
     const d = await res.json()
     setPwdSaving(false)
     if (d.success) { toast({ title: 'Password changed!' }); setPwdOpen(false); setPwd({ current: '', next: '', confirm: '' }) }

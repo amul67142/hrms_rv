@@ -2,10 +2,13 @@
 
 import * as React from 'react'
 import * as XLSX from 'xlsx'
+import { apiFetch } from '@/lib/core/fetcher'
 import {
   Settings, Wifi, WifiOff, Upload, Download, FileSpreadsheet, X, CheckCircle2,
-  XCircle, AlertCircle, RefreshCw, Clock, Trash2, ChevronDown, ChevronUp,
-  FileText, Eye, EyeOff, Loader2, DownloadCloud
+  XCircle, AlertCircle, RefreshCw, Clock, ChevronDown, ChevronUp,
+  FileText, Eye, EyeOff, Loader2, DownloadCloud, Activity, Users, Link2,
+  Fingerprint, Scan, CreditCard, KeyRound, Monitor, Zap, UserPlus, Trash2,
+  Radio, ArrowRight, Search, Hash
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,12 +27,84 @@ import { useToast } from '@/components/ui/use-toast'
 // Types
 // ---------------------------------------------------------------------------
 
-interface EsslSettings {
-  portalUrl: string
-  apiKey: string
-  deviceIp: string
-  autoSyncEnabled: boolean
-  syncInterval: string
+interface DeviceInfo {
+  sn: string
+  lastPunch: {
+    time: string
+    receivedAt: string
+    deviceUserId: string
+    status: string
+    verifyMode: string
+    employeeName: string | null
+    employeeCode: string | null
+  } | null
+  todayPunches: number
+  totalPunches: number
+  unmappedUsers: number
+  mappedUsers: number
+  lastContact: string | null
+  isOnline: boolean
+}
+
+interface DeviceSummary {
+  totalDevices: number
+  onlineDevices: number
+  totalPunchesToday: number
+  totalUnmapped: number
+}
+
+interface PunchRecord {
+  id: string
+  deviceSn: string
+  deviceUserId: string
+  punchTime: string
+  status: number
+  statusLabel: string
+  verifyMode: number
+  verifyLabel: string
+  workCode: string | null
+  createdAt: string
+  employee: {
+    id: string
+    name: string
+    code: string
+    department: string
+    profileImage: string | null
+  } | null
+  isMapped: boolean
+}
+
+interface UnmappedUser {
+  deviceSn: string
+  deviceUserId: string
+  punchCount: number
+  lastPunch: string
+  lastSeen: string
+}
+
+interface DeviceMapping {
+  id: string
+  deviceSn: string
+  deviceUserId: string
+  employeeId: string
+  employee: {
+    id: string
+    name: string
+    code: string
+    department: string
+    designation: string
+    profileImage: string | null
+  }
+  createdAt: string
+  updatedAt: string
+}
+
+interface EmployeeOption {
+  id: string
+  firstName: string
+  lastName: string
+  employeeCode: string
+  department: string
 }
 
 interface ImportRow {
@@ -42,76 +117,87 @@ interface ImportRow {
   remarks: string
 }
 
-interface ValidationError {
-  row: number
-  field: string
-  message: string
-}
-
-interface ValidationWarning {
-  row: number
-  field: string
-  message: string
-}
-
-interface DuplicateCandidate {
-  row: number
-  existingRecord: any
-  duplicateCount: number
-}
-
 interface PreviewData extends ImportRow {
   _rowIndex: number
   _valid: boolean
-  _employeeCode?: string
   _mappedEmployeeCode?: string
   _error?: string
   _warning?: string
   _isDuplicate?: boolean
-  _duplicateCandidate?: DuplicateCandidate
 }
 
 type DuplicateStrategy = 'skip' | 'overwrite' | 'keep_both'
-
-interface ImportLog {
-  id: string
-  fileName: string
-  uploadedBy: string
-  uploadedAt: Date
-  totalRecords: number
-  successCount: number
-  failedCount: number
-  duplicateCount: number
-  status: 'SUCCESS' | 'PARTIAL' | 'FAILED' | 'PENDING'
-  errorReportUrl?: string
-}
-
-// No mock data — import logs are fetched from the API
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
+function timeAgo(dateStr: string | null): string {
+  if (!dateStr) return 'Never'
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const seconds = Math.floor(diff / 1000)
+  if (seconds < 60) return `${seconds}s ago`
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
+}
+
+function formatTime(dateStr: string): string {
+  const d = new Date(dateStr)
+  return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
+}
+
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr)
+  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+function formatDateTime(dateStr: string): string {
+  return `${formatDate(dateStr)} ${formatTime(dateStr)}`
+}
+
+function getStatusColor(label: string): string {
+  switch (label) {
+    case 'CHECK_IN': return '#22C55E'
+    case 'CHECK_OUT': return '#3B82F6'
+    case 'BREAK_OUT': return '#F59E0B'
+    case 'BREAK_IN': return '#8B5CF6'
+    case 'OT_IN': return '#06B6D4'
+    case 'OT_OUT': return '#EC4899'
+    default: return '#6B7280'
+  }
+}
+
+function getStatusIcon(label: string) {
+  switch (label) {
+    case 'CHECK_IN': return <ArrowRight className="h-3 w-3" style={{ color: '#22C55E' }} />
+    case 'CHECK_OUT': return <ArrowRight className="h-3 w-3 rotate-180" style={{ color: '#3B82F6' }} />
+    default: return <Activity className="h-3 w-3" style={{ color: '#6B7280' }} />
+  }
+}
+
+function getVerifyIcon(label: string) {
+  switch (label) {
+    case 'FACE': return <Scan className="h-3.5 w-3.5" />
+    case 'FINGERPRINT': return <Fingerprint className="h-3.5 w-3.5" />
+    case 'CARD': return <CreditCard className="h-3.5 w-3.5" />
+    case 'PASSWORD': return <KeyRound className="h-3.5 w-3.5" />
+    default: return <Monitor className="h-3.5 w-3.5" />
+  }
+}
+
 function validateRow(row: ImportRow, _index: number): { valid: boolean; error?: string; warning?: string; mappedCode?: string } {
-  if (!row.employee_code || row.employee_code.trim() === '') {
-    return { valid: false, error: 'Missing employee_code' }
-  }
-  if (!row.date || row.date.trim() === '') {
-    return { valid: false, error: 'Missing date' }
-  }
+  if (!row.employee_code || row.employee_code.trim() === '') return { valid: false, error: 'Missing employee_code' }
+  if (!row.date || row.date.trim() === '') return { valid: false, error: 'Missing date' }
   const hasCheckIn = row.check_in_time && row.check_in_time.trim() !== ''
   const hasCheckOut = row.check_out_time && row.check_out_time.trim() !== ''
-  if (!hasCheckIn && !hasCheckOut) {
-    return { valid: false, error: 'At least one of check_in_time or check_out_time is required' }
-  }
-  // Employee code validation happens server-side during import
+  if (!hasCheckIn && !hasCheckOut) return { valid: false, error: 'At least one of check_in_time or check_out_time is required' }
   const code = row.employee_code.trim()
-  if (!hasCheckIn) {
-    return { valid: true, warning: 'Missing check_in_time — will be recorded as check-out only', mappedCode: code }
-  }
-  if (!hasCheckOut) {
-    return { valid: true, warning: 'Missing check_out_time — will be recorded as check-in only', mappedCode: code }
-  }
+  if (!hasCheckIn) return { valid: true, warning: 'Missing check_in_time', mappedCode: code }
+  if (!hasCheckOut) return { valid: true, warning: 'Missing check_out_time', mappedCode: code }
   return { valid: true, mappedCode: code }
 }
 
@@ -120,64 +206,11 @@ function downloadTemplate() {
   const sampleRows = [
     ['EMP001', '2024-04-01', '09:00', '18:00', 'DEV-001', 'Main Gate', ''],
     ['EMP002', '2024-04-01', '09:15', '17:45', 'DEV-002', 'Back Entrance', 'Late arrival'],
-    ['EMP003', '2024-04-01', '', '17:30', 'DEV-001', 'Main Gate', 'WFH morning'],
   ]
   const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleRows])
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Attendance Template')
   XLSX.writeFile(wb, 'essl_attendance_template.xlsx')
-}
-
-function formatDate(date: Date | string, fmt: string = 'dd MMM yyyy, hh:mm a'): string {
-  const d = new Date(date)
-  const day = String(d.getDate()).padStart(2, '0')
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  const month = months[d.getMonth()]
-  const year = d.getFullYear()
-  const hours = d.getHours()
-  const minutes = String(d.getMinutes()).padStart(2, '0')
-  const ampm = hours >= 12 ? 'PM' : 'AM'
-  const hour12 = hours % 12 || 12
-  return fmt
-    .replace('dd', day)
-    .replace('MMM', month)
-    .replace('yyyy', String(year))
-    .replace('hh', String(hour12).padStart(2, '0'))
-    .replace('mm', minutes)
-    .replace('a', ampm)
-}
-
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
-
-function StatusBadge({ status }: { status: ImportLog['status'] }) {
-  switch (status) {
-    case 'SUCCESS':
-      return (
-        <Badge variant="success" className="flex items-center gap-1 whitespace-nowrap">
-          <CheckCircle2 className="h-3 w-3" /> Success
-        </Badge>
-      )
-    case 'FAILED':
-      return (
-        <Badge variant="destructive" className="flex items-center gap-1 whitespace-nowrap">
-          <XCircle className="h-3 w-3" /> Failed
-        </Badge>
-      )
-    case 'PARTIAL':
-      return (
-        <Badge variant="warning" className="flex items-center gap-1 whitespace-nowrap">
-          <AlertCircle className="h-3 w-3" /> Partial
-        </Badge>
-      )
-    case 'PENDING':
-      return (
-        <Badge variant="pending" className="flex items-center gap-1 whitespace-nowrap">
-          <Clock className="h-3 w-3" /> Pending
-        </Badge>
-      )
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -188,11 +221,13 @@ function Section({
   icon,
   title,
   description,
+  action,
   children,
 }: {
   icon: React.ReactNode
   title: string
   description: string
+  action?: React.ReactNode
   children: React.ReactNode
 }) {
   return (
@@ -201,13 +236,35 @@ function Section({
         <div className="p-2 rounded-lg" style={{ background: '#262626' }}>
           {icon}
         </div>
-        <div>
+        <div className="flex-1 min-w-0">
           <h3 className="text-sm font-semibold text-white">{title}</h3>
           <p className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>{description}</p>
         </div>
+        {action}
       </div>
       <div className="p-6">
         {children}
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Stat card
+// ---------------------------------------------------------------------------
+
+function StatCard({ icon, label, value, color, sub }: {
+  icon: React.ReactNode; label: string; value: string | number; color: string; sub?: string
+}) {
+  return (
+    <div className="rounded-xl p-4 border border-[#2A2A2A] flex items-center gap-4" style={{ background: '#0F0F0F' }}>
+      <div className="p-2.5 rounded-xl" style={{ background: `${color}14` }}>
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <p className="text-2xl font-bold text-white leading-none">{value}</p>
+        <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>{label}</p>
+        {sub && <p className="text-[10px] mt-0.5" style={{ color: '#6B7280' }}>{sub}</p>}
       </div>
     </div>
   )
@@ -220,48 +277,123 @@ function Section({
 export default function ESSLAttendancePage() {
   const { toast } = useToast()
 
+  // ---- Tab state ----
+  const [activeTab, setActiveTab] = React.useState<'dashboard' | 'punches' | 'unmapped' | 'mappings' | 'import' | 'settings'>('dashboard')
+
+  // ---- Dashboard state ----
+  const [devices, setDevices] = React.useState<DeviceInfo[]>([])
+  const [summary, setSummary] = React.useState<DeviceSummary>({ totalDevices: 0, onlineDevices: 0, totalPunchesToday: 0, totalUnmapped: 0 })
+  const [dashLoading, setDashLoading] = React.useState(true)
+
+  // ---- Punches state ----
+  const [punches, setPunches] = React.useState<PunchRecord[]>([])
+  const [punchPage, setPunchPage] = React.useState(1)
+  const [punchTotal, setPunchTotal] = React.useState(0)
+  const [punchLoading, setPunchLoading] = React.useState(false)
+
+  // ---- Unmapped state ----
+  const [unmappedUsers, setUnmappedUsers] = React.useState<UnmappedUser[]>([])
+  const [unmappedLoading, setUnmappedLoading] = React.useState(false)
+  const [employees, setEmployees] = React.useState<EmployeeOption[]>([])
+  const [mapForm, setMapForm] = React.useState<{ deviceSn: string; deviceUserId: string; employeeId: string } | null>(null)
+  const [mappingLoading, setMappingLoading] = React.useState(false)
+  const [employeeSearch, setEmployeeSearch] = React.useState('')
+
+  // ---- Mappings state ----
+  const [mappings, setMappings] = React.useState<DeviceMapping[]>([])
+  const [mappingsLoading, setMappingsLoading] = React.useState(false)
+
   // ---- Settings state ----
-  const [settings, setSettings] = React.useState<EsslSettings>({
-    portalUrl: 'https://essl.company.com/api',
-    apiKey: 'essl_sk_live_xxxxxxxxxxxxxxxxxxxx',
-    deviceIp: '192.168.1.100',
-    autoSyncEnabled: true,
-    syncInterval: '30',
+  const [settings, setSettings] = React.useState({
+    portalUrl: '', apiKey: '', deviceIp: '', autoSyncEnabled: true, syncInterval: '30',
   })
   const [settingsLoading, setSettingsLoading] = React.useState(false)
   const [settingsSaved, setSettingsSaved] = React.useState(false)
   const [showApiKey, setShowApiKey] = React.useState(false)
-  const [connectionTest, setConnectionTest] = React.useState<'success' | 'failed' | null>(null)
-  const [testingConnection, setTestingConnection] = React.useState(false)
 
   // ---- Import state ----
   const [dragActive, setDragActive] = React.useState(false)
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null)
   const [previewData, setPreviewData] = React.useState<PreviewData[]>([])
   const [showPreview, setShowPreview] = React.useState(false)
-  const [previewLoading, setPreviewLoading] = React.useState(false)
   const [importing, setImporting] = React.useState(false)
   const [duplicateStrategy, setDuplicateStrategy] = React.useState<DuplicateStrategy>('skip')
-  const [validationErrors, setValidationErrors] = React.useState<ValidationError[]>([])
-  const [validationWarnings, setValidationWarnings] = React.useState<ValidationWarning[]>([])
   const fileInputRef = React.useRef<HTMLInputElement>(null)
 
-  // ---- Import log state ----
-  const [importLogs, setImportLogs] = React.useState<ImportLog[]>([])
-  const [logPage, setLogPage] = React.useState(1)
-  const logsPerPage = 10
+  // ---- Auto-refresh ----
+  const refreshInterval = React.useRef<NodeJS.Timeout | null>(null)
 
   // -------------------------------------------------------------------------
-  // Settings handlers
+  // Data fetching
   // -------------------------------------------------------------------------
 
-  React.useEffect(() => {
-    fetchSettings()
+  const fetchDashboard = React.useCallback(async () => {
+    try {
+      const res = await apiFetch('/api/essl/devices')
+      const json = await res.json()
+      if (json.success) {
+        setDevices(json.data.devices)
+        setSummary(json.data.summary)
+      }
+    } catch (e) { console.error('Dashboard fetch error:', e) }
+    finally { setDashLoading(false) }
   }, [])
 
-  async function fetchSettings() {
+  const fetchPunches = React.useCallback(async (page = 1) => {
+    setPunchLoading(true)
     try {
-      const res = await fetch('/api/essl/settings')
+      const res = await apiFetch(`/api/essl/punches?page=${page}&limit=30`)
+      const json = await res.json()
+      if (json.success) {
+        setPunches(json.data.punches)
+        setPunchTotal(json.data.pagination.total)
+      }
+    } catch (e) { console.error('Punches fetch error:', e) }
+    finally { setPunchLoading(false) }
+  }, [])
+
+  const fetchUnmapped = React.useCallback(async () => {
+    setUnmappedLoading(true)
+    try {
+      const res = await apiFetch('/api/essl/unmapped')
+      const json = await res.json()
+      if (json.success) {
+        setUnmappedUsers(json.data.unmappedUsers)
+      }
+    } catch (e) { console.error('Unmapped fetch error:', e) }
+    finally { setUnmappedLoading(false) }
+  }, [])
+
+  const fetchMappings = React.useCallback(async () => {
+    setMappingsLoading(true)
+    try {
+      const res = await apiFetch('/api/essl/device-map')
+      const json = await res.json()
+      if (json.success) setMappings(json.data)
+    } catch (e) { console.error('Mappings fetch error:', e) }
+    finally { setMappingsLoading(false) }
+  }, [])
+
+  const fetchEmployees = React.useCallback(async () => {
+    try {
+      const res = await apiFetch('/api/employees?limit=500&status=ACTIVE')
+      const json = await res.json()
+      if (json.success && json.data) {
+        const list = Array.isArray(json.data) ? json.data : json.data.employees || []
+        setEmployees(list.map((e: any) => ({
+          id: e.id,
+          firstName: e.firstName,
+          lastName: e.lastName,
+          employeeCode: e.employeeCode,
+          department: e.department,
+        })))
+      }
+    } catch (e) { console.error('Employees fetch error:', e) }
+  }, [])
+
+  const fetchSettings = React.useCallback(async () => {
+    try {
+      const res = await apiFetch('/api/essl/settings')
       const json = await res.json()
       if (json.success && json.data) {
         setSettings({
@@ -273,13 +405,86 @@ export default function ESSLAttendancePage() {
         })
       }
     } catch (_e) { /* use defaults */ }
+  }, [])
+
+  // Initial fetch
+  React.useEffect(() => {
+    fetchDashboard()
+    fetchSettings()
+    fetchEmployees()
+  }, [fetchDashboard, fetchSettings, fetchEmployees])
+
+  // Tab-specific fetch
+  React.useEffect(() => {
+    if (activeTab === 'punches') fetchPunches(punchPage)
+    if (activeTab === 'unmapped') fetchUnmapped()
+    if (activeTab === 'mappings') fetchMappings()
+  }, [activeTab, punchPage, fetchPunches, fetchUnmapped, fetchMappings])
+
+  // Auto-refresh dashboard every 30s — only while the tab is visible.
+  React.useEffect(() => {
+    if (activeTab === 'dashboard') {
+      refreshInterval.current = setInterval(() => {
+        if (document.visibilityState === 'visible') fetchDashboard()
+      }, 30000)
+      return () => { if (refreshInterval.current) clearInterval(refreshInterval.current) }
+    }
+  }, [activeTab, fetchDashboard])
+
+  // -------------------------------------------------------------------------
+  // Map user handler
+  // -------------------------------------------------------------------------
+
+  async function handleMapUser() {
+    if (!mapForm) return
+    setMappingLoading(true)
+    try {
+      const res = await apiFetch('/api/essl/unmapped', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(mapForm),
+      })
+      const json = await res.json()
+      if (json.success) {
+        toast({ title: 'User Mapped', description: json.message })
+        setMapForm(null)
+        fetchUnmapped()
+        fetchDashboard()
+        fetchMappings()
+      } else {
+        toast({ title: 'Error', description: json.error, variant: 'destructive' })
+      }
+    } catch (e) {
+      toast({ title: 'Error', description: 'Failed to create mapping', variant: 'destructive' })
+    } finally {
+      setMappingLoading(false)
+    }
   }
+
+  async function handleDeleteMapping(id: string) {
+    try {
+      const res = await apiFetch(`/api/essl/device-map?id=${id}`, { method: 'DELETE' })
+      const json = await res.json()
+      if (json.success) {
+        toast({ title: 'Mapping deleted' })
+        fetchMappings()
+      } else {
+        toast({ title: 'Error', description: json.error, variant: 'destructive' })
+      }
+    } catch (e) {
+      toast({ title: 'Error', description: 'Failed to delete mapping', variant: 'destructive' })
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Settings handlers
+  // -------------------------------------------------------------------------
 
   async function handleSaveSettings() {
     setSettingsLoading(true)
     setSettingsSaved(false)
     try {
-      const res = await fetch('/api/essl/settings', {
+      const res = await apiFetch('/api/essl/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -294,84 +499,39 @@ export default function ESSLAttendancePage() {
       if (json.success) {
         setSettingsSaved(true)
         setTimeout(() => setSettingsSaved(false), 3000)
-        toast({ title: 'Settings saved', description: 'ESSL settings updated successfully.' })
+        toast({ title: 'Settings saved' })
       } else {
-        toast({ title: 'Error', description: json.error || 'Failed to save settings.', variant: 'destructive' })
+        toast({ title: 'Error', description: json.error, variant: 'destructive' })
       }
     } catch (_e) {
-      setSettingsSaved(true)
-      setTimeout(() => setSettingsSaved(false), 3000)
-      toast({ title: 'Settings saved', description: 'ESSL settings updated (offline mode).' })
+      toast({ title: 'Error', description: 'Failed to save', variant: 'destructive' })
     } finally {
       setSettingsLoading(false)
     }
   }
 
-  async function handleTestConnection() {
-    setTestingConnection(true)
-    setConnectionTest(null)
-    try {
-      const res = await fetch('/api/essl/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ test: true }),
-      })
-      const json = await res.json()
-      if (json.success) {
-        setConnectionTest('success')
-        toast({ title: 'Connection successful', description: 'ESSL device is reachable.' })
-      } else {
-        setConnectionTest('failed')
-        toast({ title: 'Connection failed', description: json.error || 'Could not reach ESSL device.', variant: 'destructive' })
-      }
-    } catch (_e) {
-      setConnectionTest('failed')
-      toast({ title: 'Connection failed', description: 'Network error reaching ESSL device.', variant: 'destructive' })
-    } finally {
-      setTestingConnection(false)
-    }
-  }
-
   // -------------------------------------------------------------------------
-  // File upload handlers
+  // Import handlers
   // -------------------------------------------------------------------------
 
   function processFile(file: File) {
     setSelectedFile(file)
     setShowPreview(false)
     setPreviewData([])
-    setValidationErrors([])
-    setValidationWarnings([])
-
     const isCsv = file.name.toLowerCase().endsWith('.csv')
-
     const reader = new FileReader()
     reader.onload = (e) => {
       try {
         let workbook: XLSX.WorkBook
         if (isCsv) {
-          // CSV: read as text string
-          const csvText = e.target!.result as string
-          workbook = XLSX.read(csvText, { type: 'string' })
+          workbook = XLSX.read(e.target!.result as string, { type: 'string' })
         } else {
-          // Excel: read as binary array
-          const data = new Uint8Array(e.target!.result as ArrayBuffer)
-          workbook = XLSX.read(data, { type: 'array' })
+          workbook = XLSX.read(new Uint8Array(e.target!.result as ArrayBuffer), { type: 'array' })
         }
-
-        const sheetName = workbook.SheetNames[0]
-        const sheet = workbook.Sheets[sheetName]
-        const json = XLSX.utils.sheet_to_json<ImportRow>(sheet, { defval: '' })
-
-        if (json.length === 0) {
-          toast({ title: 'Empty file', description: 'The uploaded file contains no data.', variant: 'destructive' })
-          return
-        }
-
-        const errors: ValidationError[] = []
-        const warnings: ValidationWarning[] = []
+        const json = XLSX.utils.sheet_to_json<ImportRow>(workbook.Sheets[workbook.SheetNames[0]], { defval: '' })
+        if (json.length === 0) { toast({ title: 'Empty file', variant: 'destructive' }); return }
         const processed: PreviewData[] = json.map((row: any, idx: number) => {
-          const validation = validateRow(row as ImportRow, idx)
+          const v = validateRow(row, idx)
           return {
             employee_code: String(row.employee_code ?? '').trim(),
             date: String(row.date ?? '').trim(),
@@ -380,713 +540,752 @@ export default function ESSLAttendancePage() {
             device_id: String(row.device_id ?? '').trim(),
             location: String(row.location ?? '').trim(),
             remarks: String(row.remarks ?? '').trim(),
-            _rowIndex: idx + 2, // row 2 because row 1 is header
-            _valid: validation.valid,
-            _error: validation.error,
-            _warning: validation.warning,
-            _mappedEmployeeCode: validation.mappedCode,
+            _rowIndex: idx + 2,
+            _valid: v.valid,
+            _error: v.error,
+            _warning: v.warning,
+            _mappedEmployeeCode: v.mappedCode,
           }
         })
-
-        // Check for duplicate employee_code + date combinations
+        // Check duplicates
         const seen = new Map<string, number>()
         processed.forEach((row) => {
           const key = `${row.employee_code}|${row.date}`
-          if (seen.has(key)) {
-            row._isDuplicate = true
-            row._duplicateCandidate = { row: seen.get(key)!, existingRecord: processed[seen.get(key)!], duplicateCount: 0 }
-            const existing = processed[seen.get(key)!]
-            if (existing) existing._duplicateCandidate = { row: row._rowIndex, existingRecord: row, duplicateCount: 1 }
-            warnings.push({ row: row._rowIndex, field: 'duplicate', message: `Duplicate entry for ${row.employee_code} on ${row.date}` })
-          } else {
-            seen.set(key, processed.indexOf(row))
-          }
+          if (seen.has(key)) { row._isDuplicate = true } else { seen.set(key, processed.indexOf(row)) }
         })
-
         setPreviewData(processed)
-        setValidationErrors(errors)
-        setValidationWarnings(warnings)
         setShowPreview(true)
-        toast({ title: 'File parsed', description: `${processed.length} records found. Preview ready.` })
+        toast({ title: 'File parsed', description: `${processed.length} records found.` })
       } catch (err) {
-        console.error('File parse error:', err)
-        toast({ title: 'Parse error', description: 'Could not read the file. Make sure it is a valid .xlsx, .xls, or .csv file.', variant: 'destructive' })
+        toast({ title: 'Parse error', description: 'Could not read the file.', variant: 'destructive' })
       }
     }
-
-    // Read CSV as text, Excel as binary
-    if (isCsv) {
-      reader.readAsText(file)
-    } else {
-      reader.readAsArrayBuffer(file)
-    }
+    if (isCsv) reader.readAsText(file); else reader.readAsArrayBuffer(file)
   }
-
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (file) processFile(file)
-  }
-
-  function handleDrop(e: React.DragEvent) {
-    e.preventDefault()
-    setDragActive(false)
-    const file = e.dataTransfer.files?.[0]
-    if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.csv'))) {
-      processFile(file)
-    } else {
-      toast({ title: 'Invalid file type', description: 'Please upload a .xlsx, .xls, or .csv file.', variant: 'destructive' })
-    }
-  }
-
-  function handleDragOver(e: React.DragEvent) {
-    e.preventDefault()
-    setDragActive(true)
-  }
-
-  function handleDragLeave(e: React.DragEvent) {
-    e.preventDefault()
-    setDragActive(false)
-  }
-
-  function clearFile() {
-    setSelectedFile(null)
-    setShowPreview(false)
-    setPreviewData([])
-    setValidationErrors([])
-    setValidationWarnings([])
-    if (fileInputRef.current) fileInputRef.current.value = ''
-  }
-
-  // -------------------------------------------------------------------------
-  // Import handler
-  // -------------------------------------------------------------------------
 
   async function handleImport() {
     if (previewData.length === 0) return
     setImporting(true)
     try {
       const validRows = previewData.filter(r => r._valid)
-      const res = await fetch('/api/essl/sync', {
+      const res = await apiFetch('/api/essl/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          import: true,
-          fileName: selectedFile?.name,
-          records: validRows,
-          duplicateStrategy,
-        }),
+        body: JSON.stringify({ import: true, fileName: selectedFile?.name, records: validRows, duplicateStrategy }),
       })
       const json = await res.json()
       if (json.success) {
-        const newLog: ImportLog = {
-          id: Date.now().toString(),
-          fileName: selectedFile?.name || 'unknown.xlsx',
-          uploadedBy: 'admin@company.com',
-          uploadedAt: new Date(),
-          totalRecords: previewData.length,
-          successCount: json.data?.successCount ?? validRows.length,
-          failedCount: previewData.length - validRows.length,
-          duplicateCount: previewData.filter(r => r._isDuplicate).length,
-          status: json.data?.status ?? 'SUCCESS',
-        }
-        setImportLogs(prev => [newLog, ...prev])
-        toast({ title: 'Import completed', description: `${newLog.successCount} records imported successfully.` })
-        clearFile()
+        toast({ title: 'Import completed', description: `${json.data?.successCount ?? validRows.length} records imported.` })
+        setSelectedFile(null); setShowPreview(false); setPreviewData([])
+        if (fileInputRef.current) fileInputRef.current.value = ''
       } else {
-        toast({ title: 'Import failed', description: json.error || 'Import operation failed.', variant: 'destructive' })
+        toast({ title: 'Import failed', description: json.error, variant: 'destructive' })
       }
     } catch (_e) {
-      toast({ title: 'Import failed', description: 'Network error — please try again.', variant: 'destructive' })
-    } finally {
-      setImporting(false)
-    }
+      toast({ title: 'Import failed', description: 'Network error', variant: 'destructive' })
+    } finally { setImporting(false) }
   }
 
-  // -------------------------------------------------------------------------
-  // Derived counts
-  // -------------------------------------------------------------------------
-
+  // ---- Derived ----
   const validCount = previewData.filter(r => r._valid).length
-  const invalidCount = previewData.filter(r => !r._valid).length
-  const duplicateCount = previewData.filter(r => r._isDuplicate).length
-  const paginatedLogs = importLogs.slice((logPage - 1) * logsPerPage, logPage * logsPerPage)
-  const totalLogPages = Math.ceil(importLogs.length / logsPerPage)
+  const filteredEmployees = employees.filter(e => {
+    if (!employeeSearch) return true
+    const q = employeeSearch.toLowerCase()
+    return `${e.firstName} ${e.lastName}`.toLowerCase().includes(q) ||
+           e.employeeCode.toLowerCase().includes(q) ||
+           e.department.toLowerCase().includes(q)
+  })
 
   // -------------------------------------------------------------------------
   // Render
   // -------------------------------------------------------------------------
 
+  const tabs = [
+    { id: 'dashboard' as const, label: 'Dashboard', icon: <Activity className="h-4 w-4" /> },
+    { id: 'punches' as const, label: 'Live Punches', icon: <Zap className="h-4 w-4" /> },
+    { id: 'unmapped' as const, label: 'Unmapped Users', icon: <AlertCircle className="h-4 w-4" />, badge: summary.totalUnmapped },
+    { id: 'mappings' as const, label: 'Device Mappings', icon: <Link2 className="h-4 w-4" /> },
+    { id: 'import' as const, label: 'Excel Import', icon: <Upload className="h-4 w-4" /> },
+    { id: 'settings' as const, label: 'Settings', icon: <Settings className="h-4 w-4" /> },
+  ]
+
   return (
     <div className="space-y-6">
-
       {/* Page header */}
       <div>
-        <h2 className="text-2xl font-bold text-white">ESSL Attendance Sync</h2>
+        <h2 className="text-2xl font-bold text-white">Biometric Attendance</h2>
         <p className="text-sm mt-1" style={{ color: '#9CA3AF' }}>
-          Configure ESSL connection, import attendance records from Excel, and review sync history
+          Real-time biometric device management, push receiver status, and attendance sync
         </p>
       </div>
 
-      {/* ------------------------------------------------------------------ */}
-      {/* 1. ESSL Settings                                                    */}
-      {/* ------------------------------------------------------------------ */}
-      <Section
-        icon={<Settings className="h-5 w-5 text-[#60A5FA]" />}
-        title="ESSL Settings"
-        description="Configure the ESSL device connection and auto-sync behavior"
-      >
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left: connection fields */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="portalUrl" className="text-xs font-medium text-gray-300">Portal URL</Label>
-              <Input
-                id="portalUrl"
-                value={settings.portalUrl}
-                onChange={e => setSettings(s => ({ ...s, portalUrl: e.target.value }))}
-                placeholder="https://essl.company.com/api"
-                className="bg-[#0F0F0F] border-[#2A2A2A] text-white text-sm"
-              />
+      {/* Tab navigation */}
+      <div className="flex items-center gap-1 p-1 rounded-xl border border-[#2A2A2A] overflow-x-auto" style={{ background: '#0F0F0F' }}>
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`
+              flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap
+              ${activeTab === tab.id
+                ? 'text-white shadow-sm'
+                : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.03]'}
+            `}
+            style={activeTab === tab.id ? { background: '#1A1A1A', borderColor: '#2A2A2A' } : {}}
+          >
+            {tab.icon}
+            {tab.label}
+            {tab.badge && tab.badge > 0 ? (
+              <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded-full" style={{ background: '#EF444420', color: '#EF4444' }}>
+                {tab.badge}
+              </span>
+            ) : null}
+          </button>
+        ))}
+      </div>
+
+      {/* ================================================================== */}
+      {/* DASHBOARD TAB                                                       */}
+      {/* ================================================================== */}
+      {activeTab === 'dashboard' && (
+        <>
+          {/* Summary stats */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard
+              icon={<Monitor className="h-5 w-5" style={{ color: '#60A5FA' }} />}
+              label="Registered Devices"
+              value={summary.totalDevices}
+              color="#60A5FA"
+              sub={`${summary.onlineDevices} online`}
+            />
+            <StatCard
+              icon={<Zap className="h-5 w-5" style={{ color: '#22C55E' }} />}
+              label="Punches Today"
+              value={summary.totalPunchesToday}
+              color="#22C55E"
+            />
+            <StatCard
+              icon={<AlertCircle className="h-5 w-5" style={{ color: '#F59E0B' }} />}
+              label="Unmapped Users"
+              value={summary.totalUnmapped}
+              color="#F59E0B"
+              sub={summary.totalUnmapped > 0 ? 'Needs attention' : 'All mapped'}
+            />
+            <StatCard
+              icon={<Users className="h-5 w-5" style={{ color: '#A78BFA' }} />}
+              label="Online Devices"
+              value={summary.onlineDevices}
+              color="#A78BFA"
+              sub={`of ${summary.totalDevices}`}
+            />
+          </div>
+
+          {/* Push receiver URL */}
+          <div className="rounded-xl p-4 border border-[#2A2A2A] flex flex-col sm:flex-row items-start sm:items-center gap-3" style={{ background: '#0F0F0F' }}>
+            <div className="p-2 rounded-lg" style={{ background: '#22C55E14' }}>
+              <Radio className="h-5 w-5" style={{ color: '#22C55E' }} />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="apiKey" className="text-xs font-medium text-gray-300">API Key</Label>
-              <div className="relative">
-                <Input
-                  id="apiKey"
-                  type={showApiKey ? 'text' : 'password'}
-                  value={settings.apiKey}
-                  onChange={e => setSettings(s => ({ ...s, apiKey: e.target.value }))}
-                  placeholder="essl_sk_live_..."
-                  className="bg-[#0F0F0F] border-[#2A2A2A] text-white text-sm pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowApiKey(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
-                >
-                  {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="deviceIp" className="text-xs font-medium text-gray-300">Device IP</Label>
-              <Input
-                id="deviceIp"
-                value={settings.deviceIp}
-                onChange={e => setSettings(s => ({ ...s, deviceIp: e.target.value }))}
-                placeholder="192.168.1.100"
-                className="bg-[#0F0F0F] border-[#2A2A2A] text-white text-sm"
-              />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white">Push Receiver Active</p>
+              <p className="text-xs mt-0.5" style={{ color: '#6B7280' }}>
+                Configure your eSSL device to push to: <code className="px-1.5 py-0.5 rounded text-[#22C55E] text-xs" style={{ background: '#22C55E14' }}>{typeof window !== 'undefined' ? window.location.origin : ''}/iclock/cdata</code>
+              </p>
             </div>
             <Button
               variant="outline"
               size="sm"
-              onClick={handleTestConnection}
-              disabled={testingConnection}
-              className="border-[#2A2A2A] text-gray-300 hover:bg-[#262626]"
+              onClick={() => { fetchDashboard(); toast({ title: 'Dashboard refreshed' }) }}
+              className="border-[#2A2A2A] text-gray-300 hover:bg-[#262626] shrink-0"
             >
-              {testingConnection ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : connectionTest === 'success' ? (
-                <Wifi className="h-4 w-4 mr-2" style={{ color: '#22C55E' }} />
-              ) : connectionTest === 'failed' ? (
-                <WifiOff className="h-4 w-4 mr-2" style={{ color: '#EF4444' }} />
-              ) : (
-                <Wifi className="h-4 w-4 mr-2" />
-              )}
-              {testingConnection ? 'Testing...' : 'Test Connection'}
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+              Refresh
             </Button>
-            {connectionTest && (
-              <div
-                className="flex items-center gap-2 text-sm px-3 py-2 rounded-lg"
-                style={{
-                  background: connectionTest === 'success' ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)',
-                  color: connectionTest === 'success' ? '#22C55E' : '#EF4444',
-                }}
-              >
-                {connectionTest === 'success' ? (
-                  <CheckCircle2 className="h-4 w-4 shrink-0" />
-                ) : (
-                  <XCircle className="h-4 w-4 shrink-0" />
-                )}
-                {connectionTest === 'success' ? 'ESSL device is reachable' : 'Could not connect to ESSL device'}
-              </div>
-            )}
           </div>
 
-          {/* Right: auto-sync fields */}
-          <div className="space-y-4">
-            <div
-              className="flex items-center justify-between p-4 rounded-lg"
-              style={{ background: '#0F0F0F', border: '1px solid #2A2A2A' }}
-            >
-              <div>
-                <p className="text-sm font-medium text-white">Enable Auto-Sync</p>
-                <p className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>
-                  Automatically sync attendance data at set intervals
+          {/* Device cards */}
+          <Section
+            icon={<Monitor className="h-5 w-5 text-[#60A5FA]" />}
+            title="Registered Devices"
+            description="Biometric devices that have contacted the push receiver"
+          >
+            {dashLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-gray-500" />
+              </div>
+            ) : devices.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-14 gap-3">
+                <Monitor className="h-10 w-10 text-gray-600" />
+                <p className="text-sm" style={{ color: '#9CA3AF' }}>No devices registered yet</p>
+                <p className="text-xs text-center max-w-sm" style={{ color: '#6B7280' }}>
+                  Configure your eSSL device&apos;s Cloud Server / ADMS URL to point to this server. The device will register automatically on first contact.
                 </p>
               </div>
-              <Switch
-                checked={settings.autoSyncEnabled}
-                onCheckedChange={v => setSettings(s => ({ ...s, autoSyncEnabled: v }))}
-              />
-            </div>
-
-            {settings.autoSyncEnabled && (
-              <div className="space-y-2">
-                <Label className="text-xs font-medium text-gray-300">Sync Interval</Label>
-                <Select
-                  value={settings.syncInterval}
-                  onValueChange={v => setSettings(s => ({ ...s, syncInterval: v }))}
-                >
-                  <SelectTrigger className="bg-[#0F0F0F] border-[#2A2A2A] text-white text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#1A1A1A] border-[#2A2A2A] text-white">
-                    <SelectItem value="5">Every 5 minutes</SelectItem>
-                    <SelectItem value="10">Every 10 minutes</SelectItem>
-                    <SelectItem value="15">Every 15 minutes</SelectItem>
-                    <SelectItem value="30">Every 30 minutes</SelectItem>
-                    <SelectItem value="60">Every 1 hour</SelectItem>
-                    <SelectItem value="120">Every 2 hours</SelectItem>
-                    <SelectItem value="360">Every 6 hours</SelectItem>
-                    <SelectItem value="720">Every 12 hours</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <Button
-              onClick={handleSaveSettings}
-              disabled={settingsLoading}
-              className="w-full mt-2"
-              style={{ background: '#60A5FA', color: '#000', border: 'none' }}
-            >
-              {settingsLoading ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : settingsSaved ? (
-                <CheckCircle2 className="h-4 w-4 mr-2" style={{ color: '#16A34A' }} />
-              ) : (
-                <Settings className="h-4 w-4 mr-2" />
-              )}
-              {settingsLoading ? 'Saving...' : settingsSaved ? 'Saved!' : 'Save Settings'}
-            </Button>
-          </div>
-        </div>
-      </Section>
-
-      {/* ------------------------------------------------------------------ */}
-      {/* 2. Manual Import                                                     */}
-      {/* ------------------------------------------------------------------ */}
-      <Section
-        icon={<Upload className="h-5 w-5 text-[#A78BFA]" />}
-        title="Manual Import"
-        description="Upload an Excel file containing attendance records"
-      >
-        <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
-          {/* Left: upload zone */}
-          <div className="xl:col-span-3">
-            <div
-              className={`
-                relative border-2 border-dashed rounded-xl transition-all duration-200 cursor-pointer
-                flex flex-col items-center justify-center gap-3 py-10 px-6
-                ${dragActive
-                  ? 'border-[#A78BFA] bg-[#A78BFA]/[0.05]'
-                  : selectedFile
-                    ? 'border-[#22C55E] bg-[#22C55E]/[0.04]'
-                    : 'border-[#2A2A2A] bg-[#0F0F0F] hover:border-[#404040] hover:bg-[#0F0F0F]/80'
-                }
-              `}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onClick={() => !selectedFile && fileInputRef.current?.click()}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                className="hidden"
-                onChange={handleFileChange}
-              />
-              {selectedFile ? (
-                <>
-                  <FileSpreadsheet className="h-10 w-10" style={{ color: '#22C55E' }} />
-                  <div className="text-center">
-                    <p className="text-sm font-medium text-white">{selectedFile.name}</p>
-                    <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>
-                      {(selectedFile.size / 1024).toFixed(1)} KB — Click to change
-                    </p>
-                  </div>
-                  <button
-                    onClick={e => { e.stopPropagation(); clearFile() }}
-                    className="absolute top-3 right-3 p-1 rounded hover:bg-[#2A2A2A] transition-colors"
-                  >
-                    <X className="h-4 w-4 text-gray-400" />
-                  </button>
-                </>
-              ) : (
-                <>
-                  <DownloadCloud className="h-10 w-10 text-gray-500" />
-                  <div className="text-center">
-                    <p className="text-sm font-medium text-white">
-                      {dragActive ? 'Drop the file here' : 'Drag & drop your Excel file here'}
-                    </p>
-                    <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>
-                      or <span className="underline" style={{ color: '#A78BFA' }}>click to browse</span>
-                    </p>
-                  </div>
-                  <p className="text-xs" style={{ color: '#6B7280' }}>Supports .xlsx, .xls, .csv</p>
-                </>
-              )}
-            </div>
-
-            {showPreview && (
-              <div className="mt-4 flex flex-wrap gap-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-gray-400">Total rows:</span>
-                  <span className="text-white font-medium">{previewData.length}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-gray-400">Valid:</span>
-                  <span className="font-medium" style={{ color: '#22C55E' }}>{validCount}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-gray-400">Invalid:</span>
-                  <span className="font-medium" style={{ color: invalidCount > 0 ? '#EF4444' : '#22C55E' }}>
-                    {invalidCount}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-gray-400">Duplicates:</span>
-                  <span className="font-medium" style={{ color: duplicateCount > 0 ? '#F59E0B' : '#22C55E' }}>
-                    {duplicateCount}
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Right: expected columns + template */}
-          <div className="xl:col-span-2 space-y-4">
-            <div>
-              <p className="text-xs font-semibold text-gray-300 mb-2 uppercase tracking-wide">
-                Expected Columns
-              </p>
-              <div className="space-y-1.5">
-                {[
-                  { col: 'employee_code', req: true, desc: 'ESSL employee identifier' },
-                  { col: 'date', req: true, desc: 'YYYY-MM-DD format' },
-                  { col: 'check_in_time', req: false, desc: 'HH:MM format' },
-                  { col: 'check_out_time', req: false, desc: 'HH:MM format' },
-                  { col: 'device_id', req: false, desc: 'Device identifier' },
-                  { col: 'location', req: false, desc: 'Gate or zone name' },
-                  { col: 'remarks', req: false, desc: 'Optional note' },
-                ].map(({ col, req, desc }) => (
-                  <div key={col} className="flex items-start gap-2 text-xs">
-                    <code className="px-1.5 py-0.5 rounded shrink-0 font-mono text-[#A78BFA]" style={{ background: '#A78BFA14' }}>
-                      {col}
-                    </code>
-                    {!req && <span className="text-gray-500 italic">{desc}</span>}
-                    {req && <span className="text-gray-500">{desc}</span>}
-                    {req && (
-                      <span className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: '#EF444420', color: '#EF4444' }}>
-                        REQUIRED
-                      </span>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {devices.map(device => (
+                  <div key={device.sn} className="rounded-xl p-4 border border-[#2A2A2A] space-y-3" style={{ background: '#0F0F0F' }}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className={`h-2.5 w-2.5 rounded-full ${device.isOnline ? 'bg-green-400 animate-pulse' : 'bg-gray-600'}`} />
+                        <span className="text-sm font-semibold text-white font-mono">{device.sn}</span>
+                      </div>
+                      <Badge
+                        variant={device.isOnline ? 'success' : 'secondary'}
+                        className="text-[10px] px-1.5 py-0"
+                      >
+                        {device.isOnline ? 'Online' : 'Offline'}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <p className="text-xs" style={{ color: '#6B7280' }}>Today</p>
+                        <p className="text-lg font-bold text-white">{device.todayPunches}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs" style={{ color: '#6B7280' }}>Total</p>
+                        <p className="text-lg font-bold text-white">{device.totalPunches}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs" style={{ color: '#6B7280' }}>Mapped</p>
+                        <p className="text-lg font-bold text-white">{device.mappedUsers}</p>
+                      </div>
+                    </div>
+                    {device.unmappedUsers > 0 && (
+                      <div className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg" style={{ background: '#F59E0B0D', border: '1px solid #F59E0B20' }}>
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0" style={{ color: '#F59E0B' }} />
+                        <span style={{ color: '#F59E0B' }}>{device.unmappedUsers} unmapped user(s)</span>
+                      </div>
                     )}
+                    <div className="text-xs space-y-1" style={{ color: '#6B7280' }}>
+                      <p>Last contact: {timeAgo(device.lastContact)}</p>
+                      {device.lastPunch && (
+                        <p>Last punch: {device.lastPunch.employeeName || `User #${device.lastPunch.deviceUserId}`} — {device.lastPunch.status.replace('_', ' ')} at {formatTime(device.lastPunch.time)}</p>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
-            </div>
+            )}
+          </Section>
+        </>
+      )}
+
+      {/* ================================================================== */}
+      {/* LIVE PUNCHES TAB                                                    */}
+      {/* ================================================================== */}
+      {activeTab === 'punches' && (
+        <Section
+          icon={<Zap className="h-5 w-5 text-[#22C55E]" />}
+          title="Live Punch Feed"
+          description="Recent attendance punches received from biometric devices"
+          action={
             <Button
               variant="outline"
               size="sm"
-              className="w-full border-[#2A2A2A] text-gray-300 hover:bg-[#262626]"
-              onClick={downloadTemplate}
+              onClick={() => fetchPunches(punchPage)}
+              disabled={punchLoading}
+              className="border-[#2A2A2A] text-gray-300 hover:bg-[#262626]"
             >
-              <Download className="h-4 w-4 mr-2" />
-              Download Template
+              {punchLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
             </Button>
-          </div>
-        </div>
-      </Section>
-
-      {/* ------------------------------------------------------------------ */}
-      {/* 3. Import Preview                                                    */}
-      {/* ------------------------------------------------------------------ */}
-      {showPreview && (
-        <Section
-          icon={<FileText className="h-5 w-5 text-[#F59E0B]" />}
-          title="Import Preview"
-          description={`Previewing ${previewData.length} records from ${selectedFile?.name}`}
+          }
         >
-          {/* Controls row */}
-          <div className="flex flex-wrap items-center gap-4 mb-4">
-            <div className="flex items-center gap-2">
-              <Label className="text-xs text-gray-300 whitespace-nowrap">Duplicate handling:</Label>
-              <Select value={duplicateStrategy} onValueChange={v => setDuplicateStrategy(v as DuplicateStrategy)}>
-                <SelectTrigger className="bg-[#0F0F0F] border-[#2A2A2A] text-white text-xs h-8 w-36">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-[#1A1A1A] border-[#2A2A2A] text-white">
-                  <SelectItem value="skip">Skip duplicates</SelectItem>
-                  <SelectItem value="overwrite">Overwrite existing</SelectItem>
-                  <SelectItem value="keep_both">Keep both</SelectItem>
-                </SelectContent>
-              </Select>
+          {punchLoading && punches.length === 0 ? (
+            <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-gray-500" /></div>
+          ) : punches.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-14 gap-3">
+              <Zap className="h-10 w-10 text-gray-600" />
+              <p className="text-sm" style={{ color: '#9CA3AF' }}>No punches received yet</p>
             </div>
-
-            <div className="ml-auto flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowPreview(false)}
-                className="border-[#2A2A2A] text-gray-300 hover:bg-[#262626] text-xs h-8"
-              >
-                <X className="h-3 w-3 mr-1" /> Cancel
-              </Button>
-              <Button
-                size="sm"
-                disabled={validCount === 0 || importing}
-                onClick={handleImport}
-                className="text-xs h-8"
-                style={{ background: '#22C55E', color: '#000', border: 'none' }}
-              >
-                {importing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
-                {importing ? 'Importing...' : `Import ${validCount} Records`}
-              </Button>
-            </div>
-          </div>
-
-          {/* Stats bar */}
-          {validationWarnings.length > 0 && (
-            <div className="mb-4 p-3 rounded-lg flex items-start gap-2" style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)' }}>
-              <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" style={{ color: '#F59E0B' }} />
-              <div className="text-xs" style={{ color: '#F59E0B' }}>
-                <span className="font-semibold">{validationWarnings.length} warning(s) found.</span>
-                {' '}Review highlighted rows below. Duplicates will be handled using the &ldquo;{duplicateStrategy.replace('_', ' ')}&rdquo; strategy.
+          ) : (
+            <>
+              <div className="rounded-lg overflow-x-auto border border-[#2A2A2A]" style={{ background: '#0F0F0F' }}>
+                <Table>
+                  <TableHeader>
+                    <TableRow style={{ background: '#1A1A1A' }}>
+                      {['Time', 'Employee', 'Device User', 'Status', 'Verify', 'Device', 'Received'].map(h => (
+                        <TableHead key={h} className="text-xs font-semibold text-gray-300 whitespace-nowrap px-4 py-3">{h}</TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {punches.map(p => (
+                      <TableRow key={p.id} className="hover:bg-white/[0.02] transition-colors border-t border-[#2A2A2A]">
+                        <TableCell className="px-4 py-3 text-sm text-white whitespace-nowrap font-mono">
+                          {formatDateTime(p.punchTime)}
+                        </TableCell>
+                        <TableCell className="px-4 py-3">
+                          {p.employee ? (
+                            <div>
+                              <p className="text-sm text-white">{p.employee.name}</p>
+                              <p className="text-[10px]" style={{ color: '#6B7280' }}>{p.employee.code} · {p.employee.department}</p>
+                            </div>
+                          ) : (
+                            <span className="text-xs italic" style={{ color: '#F59E0B' }}>Unmapped</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-xs text-gray-400 font-mono">#{p.deviceUserId}</TableCell>
+                        <TableCell className="px-4 py-3">
+                          <div className="flex items-center gap-1.5">
+                            {getStatusIcon(p.statusLabel)}
+                            <span className="text-xs font-medium" style={{ color: getStatusColor(p.statusLabel) }}>
+                              {p.statusLabel.replace('_', ' ')}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-4 py-3">
+                          <div className="flex items-center gap-1.5 text-gray-400">
+                            {getVerifyIcon(p.verifyLabel)}
+                            <span className="text-xs">{p.verifyLabel}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-xs text-gray-500 font-mono">{p.deviceSn}</TableCell>
+                        <TableCell className="px-4 py-3 text-xs text-gray-500">{timeAgo(p.createdAt)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
-            </div>
+              {/* Pagination */}
+              <div className="flex items-center justify-between mt-4">
+                <p className="text-xs" style={{ color: '#9CA3AF' }}>{punchTotal} total punches</p>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="sm" disabled={punchPage <= 1} onClick={() => setPunchPage(p => p - 1)} className="h-7 w-7 p-0 border border-[#2A2A2A] text-gray-400">
+                    <ChevronUp className="h-4 w-4 -rotate-90" />
+                  </Button>
+                  <span className="text-xs text-gray-400 px-2">Page {punchPage}</span>
+                  <Button variant="ghost" size="sm" disabled={punchPage * 30 >= punchTotal} onClick={() => setPunchPage(p => p + 1)} className="h-7 w-7 p-0 border border-[#2A2A2A] text-gray-400">
+                    <ChevronDown className="h-4 w-4 -rotate-90" />
+                  </Button>
+                </div>
+              </div>
+            </>
           )}
-
-          {/* Table */}
-          <div className="rounded-lg overflow-x-auto border border-[#2A2A2A]" style={{ background: '#0F0F0F' }}>
-            <Table>
-              <TableHeader>
-                <TableRow style={{ background: '#1A1A1A' }}>
-                  {['#', 'employee_code', 'HRM Code', 'date', 'check_in', 'check_out', 'device_id', 'location', 'remarks', 'Status'].map(h => (
-                    <TableHead key={h} className="text-xs font-semibold text-gray-300 whitespace-nowrap px-3 py-2">
-                      {h}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {previewData.map((row, idx) => (
-                  <TableRow
-                    key={idx}
-                    className={`
-                      transition-colors
-                      ${!row._valid ? 'bg-red-950/20' : row._isDuplicate ? 'bg-amber-950/20' : 'hover:bg-white/[0.02]'}
-                    `}
-                  >
-                    <TableCell className="text-xs text-gray-500 px-3 py-2 whitespace-nowrap">{row._rowIndex}</TableCell>
-                    <TableCell className="text-xs text-white px-3 py-2 font-mono whitespace-nowrap">
-                      {row.employee_code || <span className="italic text-gray-500">—</span>}
-                    </TableCell>
-                    <TableCell className="text-xs px-3 py-2 font-mono whitespace-nowrap">
-                      {row._mappedEmployeeCode ? (
-                        <span style={{ color: '#22C55E' }}>{row._mappedEmployeeCode}</span>
-                      ) : row.employee_code ? (
-                        <span style={{ color: '#EF4444' }}>Not found</span>
-                      ) : (
-                        <span className="italic text-gray-500">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-xs text-gray-300 px-3 py-2 whitespace-nowrap">
-                      {row.date || <span className="italic text-gray-500">—</span>}
-                    </TableCell>
-                    <TableCell className="text-xs text-gray-300 px-3 py-2 whitespace-nowrap">
-                      {row.check_in_time || <span className="italic text-gray-500">—</span>}
-                    </TableCell>
-                    <TableCell className="text-xs text-gray-300 px-3 py-2 whitespace-nowrap">
-                      {row.check_out_time || <span className="italic text-gray-500">—</span>}
-                    </TableCell>
-                    <TableCell className="text-xs text-gray-500 px-3 py-2 whitespace-nowrap">
-                      {row.device_id || <span className="italic text-gray-600">—</span>}
-                    </TableCell>
-                    <TableCell className="text-xs text-gray-500 px-3 py-2 whitespace-nowrap">
-                      {row.location || <span className="italic text-gray-600">—</span>}
-                    </TableCell>
-                    <TableCell className="text-xs text-gray-500 px-3 py-2 max-w-[120px] truncate">
-                      {row.remarks || <span className="italic text-gray-600">—</span>}
-                    </TableCell>
-                    <TableCell className="px-3 py-2">
-                      {!row._valid ? (
-                        <div className="flex items-center gap-1">
-                          <Badge variant="destructive" className="text-[10px] px-1.5 py-0 whitespace-nowrap">
-                            <XCircle className="h-3 w-3 mr-0.5" /> {row._error || 'Invalid'}
-                          </Badge>
-                        </div>
-                      ) : row._isDuplicate ? (
-                        <div className="flex items-center gap-1">
-                          <Badge variant="warning" className="text-[10px] px-1.5 py-0 whitespace-nowrap">
-                            <AlertCircle className="h-3 w-3 mr-0.5" /> Duplicate
-                          </Badge>
-                        </div>
-                      ) : row._warning ? (
-                        <div className="flex items-center gap-1">
-                          <Badge variant="pending" className="text-[10px] px-1.5 py-0 whitespace-nowrap">
-                            <AlertCircle className="h-3 w-3 mr-0.5" /> {row._warning.slice(0, 20)}
-                          </Badge>
-                        </div>
-                      ) : (
-                        <CheckCircle2 className="h-4 w-4" style={{ color: '#22C55E' }} />
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          <p className="text-xs mt-3" style={{ color: '#6B7280' }}>
-            Showing {previewData.length} of {previewData.length} records. Only valid rows will be imported.
-          </p>
         </Section>
       )}
 
-      {/* ------------------------------------------------------------------ */}
-      {/* 4. Import Log Table                                                  */}
-      {/* ------------------------------------------------------------------ */}
-      <Section
-        icon={<RefreshCw className="h-5 w-5 text-[#34D399]" />}
-        title="Import Log"
-        description="History of Excel file imports with success, failure, and duplicate counts"
-      >
-        {importLogs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-14 gap-3">
-            <FileText className="h-8 w-8 text-gray-600" />
-            <p className="text-sm" style={{ color: '#9CA3AF' }}>No import records yet</p>
-            <p className="text-xs" style={{ color: '#6B7280' }}>Upload an Excel file above to get started</p>
-          </div>
-        ) : (
-          <>
+      {/* ================================================================== */}
+      {/* UNMAPPED USERS TAB                                                  */}
+      {/* ================================================================== */}
+      {activeTab === 'unmapped' && (
+        <Section
+          icon={<AlertCircle className="h-5 w-5 text-[#F59E0B]" />}
+          title="Unmapped Device Users"
+          description="Device users that haven't been linked to an HRMS employee yet. Punches are stored but won't appear in attendance until mapped."
+        >
+          {unmappedLoading ? (
+            <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-gray-500" /></div>
+          ) : unmappedUsers.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-14 gap-3">
+              <CheckCircle2 className="h-10 w-10" style={{ color: '#22C55E' }} />
+              <p className="text-sm" style={{ color: '#9CA3AF' }}>All device users are mapped!</p>
+              <p className="text-xs" style={{ color: '#6B7280' }}>No action needed. New unmapped users will appear here automatically.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="rounded-lg overflow-x-auto border border-[#2A2A2A]" style={{ background: '#0F0F0F' }}>
+                <Table>
+                  <TableHeader>
+                    <TableRow style={{ background: '#1A1A1A' }}>
+                      {['Device SN', 'Device User ID', 'Punches', 'Last Punch', 'Action'].map(h => (
+                        <TableHead key={h} className="text-xs font-semibold text-gray-300 whitespace-nowrap px-4 py-3">{h}</TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {unmappedUsers.map((u, i) => (
+                      <TableRow key={`${u.deviceSn}-${u.deviceUserId}`} className="hover:bg-white/[0.02] transition-colors border-t border-[#2A2A2A]">
+                        <TableCell className="px-4 py-3 text-xs text-gray-400 font-mono">{u.deviceSn}</TableCell>
+                        <TableCell className="px-4 py-3">
+                          <div className="flex items-center gap-1.5">
+                            <Hash className="h-3.5 w-3.5 text-gray-500" />
+                            <span className="text-sm font-medium text-white font-mono">{u.deviceUserId}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-4 py-3 text-sm text-white">{u.punchCount}</TableCell>
+                        <TableCell className="px-4 py-3 text-xs text-gray-400">{u.lastPunch ? formatDateTime(u.lastPunch) : '—'}</TableCell>
+                        <TableCell className="px-4 py-3">
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setMapForm({ deviceSn: u.deviceSn, deviceUserId: u.deviceUserId, employeeId: '' })
+                              setEmployeeSearch('')
+                            }}
+                            className="h-7 text-xs"
+                            style={{ background: '#22C55E', color: '#000', border: 'none' }}
+                          >
+                            <UserPlus className="h-3 w-3 mr-1" /> Map Employee
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Map form modal */}
+              {mapForm && (
+                <div className="rounded-xl p-5 border-2 space-y-4" style={{ background: '#1A1A1A', borderColor: '#22C55E40' }}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-white">
+                        Link Device User <span className="font-mono text-[#22C55E]">#{mapForm.deviceUserId}</span> to Employee
+                      </p>
+                      <p className="text-xs mt-0.5" style={{ color: '#6B7280' }}>Device: {mapForm.deviceSn}</p>
+                    </div>
+                    <button onClick={() => setMapForm(null)} className="p-1 rounded hover:bg-[#2A2A2A]">
+                      <X className="h-4 w-4 text-gray-400" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs text-gray-300">Search Employee</Label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                      <Input
+                        value={employeeSearch}
+                        onChange={e => setEmployeeSearch(e.target.value)}
+                        placeholder="Search by name, code, or department..."
+                        className="bg-[#0F0F0F] border-[#2A2A2A] text-white text-sm pl-9"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="max-h-48 overflow-y-auto rounded-lg border border-[#2A2A2A]" style={{ background: '#0F0F0F' }}>
+                    {filteredEmployees.length === 0 ? (
+                      <p className="text-xs text-gray-500 p-4 text-center">No employees found</p>
+                    ) : (
+                      filteredEmployees.slice(0, 20).map(emp => (
+                        <button
+                          key={emp.id}
+                          onClick={() => setMapForm({ ...mapForm, employeeId: emp.id })}
+                          className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors border-b border-[#2A2A2A] last:border-b-0 ${
+                            mapForm.employeeId === emp.id ? 'bg-[#22C55E14]' : 'hover:bg-white/[0.03]'
+                          }`}
+                        >
+                          <div className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: '#262626', color: '#9CA3AF' }}>
+                            {emp.firstName[0]}{emp.lastName[0]}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-white">{emp.firstName} {emp.lastName}</p>
+                            <p className="text-[10px]" style={{ color: '#6B7280' }}>{emp.employeeCode} · {emp.department}</p>
+                          </div>
+                          {mapForm.employeeId === emp.id && <CheckCircle2 className="h-4 w-4 shrink-0" style={{ color: '#22C55E' }} />}
+                        </button>
+                      ))
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-2">
+                    <Button variant="outline" size="sm" onClick={() => setMapForm(null)} className="border-[#2A2A2A] text-gray-300">
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={!mapForm.employeeId || mappingLoading}
+                      onClick={handleMapUser}
+                      style={{ background: '#22C55E', color: '#000', border: 'none' }}
+                    >
+                      {mappingLoading ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5 mr-1.5" />}
+                      {mappingLoading ? 'Mapping...' : 'Confirm Mapping'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </Section>
+      )}
+
+      {/* ================================================================== */}
+      {/* DEVICE MAPPINGS TAB                                                 */}
+      {/* ================================================================== */}
+      {activeTab === 'mappings' && (
+        <Section
+          icon={<Link2 className="h-5 w-5 text-[#A78BFA]" />}
+          title="Device User Mappings"
+          description="Links between biometric device user IDs and HRMS employees"
+        >
+          {mappingsLoading ? (
+            <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-gray-500" /></div>
+          ) : mappings.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-14 gap-3">
+              <Link2 className="h-10 w-10 text-gray-600" />
+              <p className="text-sm" style={{ color: '#9CA3AF' }}>No mappings created yet</p>
+              <p className="text-xs" style={{ color: '#6B7280' }}>Go to the &quot;Unmapped Users&quot; tab to link device users to employees.</p>
+            </div>
+          ) : (
             <div className="rounded-lg overflow-x-auto border border-[#2A2A2A]" style={{ background: '#0F0F0F' }}>
               <Table>
                 <TableHeader>
                   <TableRow style={{ background: '#1A1A1A' }}>
-                    {['File Name', 'Uploaded By', 'Date / Time', 'Total', 'Success', 'Failed', 'Duplicates', 'Status', 'Report'].map(h => (
-                      <TableHead key={h} className="text-xs font-semibold text-gray-300 whitespace-nowrap px-4 py-3">
-                        {h}
-                      </TableHead>
+                    {['Device SN', 'Device User ID', 'Employee', 'Code', 'Department', 'Created', ''].map(h => (
+                      <TableHead key={h} className="text-xs font-semibold text-gray-300 whitespace-nowrap px-4 py-3">{h}</TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedLogs.map(log => (
-                    <TableRow key={log.id} className="hover:bg-white/[0.02] transition-colors border-t border-[#2A2A2A]">
+                  {mappings.map(m => (
+                    <TableRow key={m.id} className="hover:bg-white/[0.02] transition-colors border-t border-[#2A2A2A]">
+                      <TableCell className="px-4 py-3 text-xs text-gray-400 font-mono">{m.deviceSn}</TableCell>
+                      <TableCell className="px-4 py-3 text-sm text-white font-mono">#{m.deviceUserId}</TableCell>
                       <TableCell className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <FileSpreadsheet className="h-4 w-4 text-gray-500 shrink-0" />
-                          <span className="text-sm text-white whitespace-nowrap max-w-[200px] truncate">
-                            {log.fileName}
-                          </span>
-                        </div>
+                        <p className="text-sm text-white">{m.employee.name}</p>
+                        <p className="text-[10px]" style={{ color: '#6B7280' }}>{m.employee.designation}</p>
                       </TableCell>
+                      <TableCell className="px-4 py-3 text-xs text-gray-400 font-mono">{m.employee.code}</TableCell>
+                      <TableCell className="px-4 py-3 text-xs text-gray-400">{m.employee.department}</TableCell>
+                      <TableCell className="px-4 py-3 text-xs text-gray-500">{formatDate(m.createdAt)}</TableCell>
                       <TableCell className="px-4 py-3">
-                        <span className="text-sm text-gray-400 whitespace-nowrap">{log.uploadedBy}</span>
-                      </TableCell>
-                      <TableCell className="px-4 py-3">
-                        <span className="text-sm text-gray-300 whitespace-nowrap">
-                          {formatDate(log.uploadedAt)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-4 py-3 text-center">
-                        <span className="text-sm text-white font-medium">{log.totalRecords}</span>
-                      </TableCell>
-                      <TableCell className="px-4 py-3 text-center">
-                        <span className="text-sm font-medium" style={{ color: '#22C55E' }}>
-                          {log.successCount}
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-4 py-3 text-center">
-                        <span className="text-sm font-medium" style={{ color: log.failedCount > 0 ? '#EF4444' : '#22C55E' }}>
-                          {log.failedCount}
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-4 py-3 text-center">
-                        <span className="text-sm font-medium" style={{ color: log.duplicateCount > 0 ? '#F59E0B' : '#6B7280' }}>
-                          {log.duplicateCount}
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-4 py-3">
-                        <StatusBadge status={log.status} />
-                      </TableCell>
-                      <TableCell className="px-4 py-3">
-                        {log.failedCount > 0 ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-xs text-gray-400 hover:text-white h-7 px-2"
-                            onClick={() => toast({ title: 'Downloading error report...', description: log.fileName })}
-                          >
-                            <Download className="h-3 w-3 mr-1" />
-                            Error Report
-                          </Button>
-                        ) : (
-                          <span className="text-xs text-gray-600 italic">—</span>
-                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteMapping(m.id)}
+                          className="h-7 w-7 p-0 text-gray-500 hover:text-red-400"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </div>
+          )}
+        </Section>
+      )}
 
-            {/* Pagination */}
-            {totalLogPages > 1 && (
-              <div className="flex items-center justify-between mt-4">
-                <p className="text-xs" style={{ color: '#9CA3AF' }}>
-                  Showing {(logPage - 1) * logsPerPage + 1}–{Math.min(logPage * logsPerPage, importLogs.length)} of {importLogs.length} records
-                </p>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={logPage === 1}
-                    onClick={() => setLogPage(p => p - 1)}
-                    className="h-7 w-7 p-0 border border-[#2A2A2A] text-gray-400 hover:text-white disabled:opacity-30"
-                  >
-                    <ChevronUp className="h-4 w-4 rotate-90" />
+      {/* ================================================================== */}
+      {/* EXCEL IMPORT TAB                                                    */}
+      {/* ================================================================== */}
+      {activeTab === 'import' && (
+        <>
+          <Section
+            icon={<Upload className="h-5 w-5 text-[#A78BFA]" />}
+            title="Manual Import"
+            description="Upload an Excel file containing attendance records"
+          >
+            <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+              <div className="xl:col-span-3">
+                <div
+                  className={`
+                    relative border-2 border-dashed rounded-xl transition-all duration-200 cursor-pointer
+                    flex flex-col items-center justify-center gap-3 py-10 px-6
+                    ${dragActive ? 'border-[#A78BFA] bg-[#A78BFA]/[0.05]'
+                      : selectedFile ? 'border-[#22C55E] bg-[#22C55E]/[0.04]'
+                      : 'border-[#2A2A2A] bg-[#0F0F0F] hover:border-[#404040]'}
+                  `}
+                  onDrop={e => { e.preventDefault(); setDragActive(false); const f = e.dataTransfer.files?.[0]; if (f) processFile(f) }}
+                  onDragOver={e => { e.preventDefault(); setDragActive(true) }}
+                  onDragLeave={e => { e.preventDefault(); setDragActive(false) }}
+                  onClick={() => !selectedFile && fileInputRef.current?.click()}
+                >
+                  <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) processFile(f) }} />
+                  {selectedFile ? (
+                    <>
+                      <FileSpreadsheet className="h-10 w-10" style={{ color: '#22C55E' }} />
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-white">{selectedFile.name}</p>
+                        <p className="text-xs mt-1" style={{ color: '#9CA3AF' }}>{(selectedFile.size / 1024).toFixed(1)} KB</p>
+                      </div>
+                      <button onClick={e => { e.stopPropagation(); setSelectedFile(null); setShowPreview(false); setPreviewData([]) }} className="absolute top-3 right-3 p-1 rounded hover:bg-[#2A2A2A]">
+                        <X className="h-4 w-4 text-gray-400" />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <DownloadCloud className="h-10 w-10 text-gray-500" />
+                      <p className="text-sm font-medium text-white">{dragActive ? 'Drop here' : 'Drag & drop Excel file'}</p>
+                      <p className="text-xs" style={{ color: '#6B7280' }}>Supports .xlsx, .xls, .csv</p>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div className="xl:col-span-2 space-y-4">
+                <div>
+                  <p className="text-xs font-semibold text-gray-300 mb-2 uppercase tracking-wide">Expected Columns</p>
+                  <div className="space-y-1.5">
+                    {[
+                      { col: 'employee_code', req: true }, { col: 'date', req: true },
+                      { col: 'check_in_time', req: false }, { col: 'check_out_time', req: false },
+                      { col: 'device_id', req: false }, { col: 'location', req: false }, { col: 'remarks', req: false },
+                    ].map(({ col, req }) => (
+                      <div key={col} className="flex items-center gap-2 text-xs">
+                        <code className="px-1.5 py-0.5 rounded font-mono text-[#A78BFA]" style={{ background: '#A78BFA14' }}>{col}</code>
+                        {req && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: '#EF444420', color: '#EF4444' }}>REQUIRED</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <Button variant="outline" size="sm" className="w-full border-[#2A2A2A] text-gray-300 hover:bg-[#262626]" onClick={downloadTemplate}>
+                  <Download className="h-4 w-4 mr-2" /> Download Template
+                </Button>
+              </div>
+            </div>
+          </Section>
+
+          {showPreview && (
+            <Section
+              icon={<FileText className="h-5 w-5 text-[#F59E0B]" />}
+              title="Import Preview"
+              description={`${previewData.length} records from ${selectedFile?.name}`}
+            >
+              <div className="flex flex-wrap items-center gap-4 mb-4">
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs text-gray-300">Duplicate handling:</Label>
+                  <Select value={duplicateStrategy} onValueChange={v => setDuplicateStrategy(v as DuplicateStrategy)}>
+                    <SelectTrigger className="bg-[#0F0F0F] border-[#2A2A2A] text-white text-xs h-8 w-36"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-[#1A1A1A] border-[#2A2A2A] text-white">
+                      <SelectItem value="skip">Skip duplicates</SelectItem>
+                      <SelectItem value="overwrite">Overwrite</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="ml-auto flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setShowPreview(false)} className="border-[#2A2A2A] text-gray-300 text-xs h-8">
+                    <X className="h-3 w-3 mr-1" /> Cancel
                   </Button>
-                  {Array.from({ length: totalLogPages }, (_, i) => i + 1).map(p => (
-                    <Button
-                      key={p}
-                      variant={p === logPage ? 'default' : 'ghost'}
-                      size="sm"
-                      onClick={() => setLogPage(p)}
-                      className={`h-7 w-7 p-0 text-xs ${p === logPage ? '' : 'border border-[#2A2A2A] text-gray-400 hover:text-white'}`}
-                      style={p === logPage ? { background: '#60A5FA', color: '#000', border: 'none' } : {}}
-                    >
-                      {p}
-                    </Button>
-                  ))}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={logPage === totalLogPages}
-                    onClick={() => setLogPage(p => p + 1)}
-                    className="h-7 w-7 p-0 border border-[#2A2A2A] text-gray-400 hover:text-white disabled:opacity-30"
-                  >
-                    <ChevronDown className="h-4 w-4 rotate-90" />
+                  <Button size="sm" disabled={validCount === 0 || importing} onClick={handleImport} className="text-xs h-8" style={{ background: '#22C55E', color: '#000' }}>
+                    {importing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
+                    {importing ? 'Importing...' : `Import ${validCount} Records`}
                   </Button>
                 </div>
               </div>
-            )}
-          </>
-        )}
-      </Section>
+              <div className="rounded-lg overflow-x-auto border border-[#2A2A2A]" style={{ background: '#0F0F0F' }}>
+                <Table>
+                  <TableHeader>
+                    <TableRow style={{ background: '#1A1A1A' }}>
+                      {['#', 'employee_code', 'date', 'check_in', 'check_out', 'Status'].map(h => (
+                        <TableHead key={h} className="text-xs font-semibold text-gray-300 whitespace-nowrap px-3 py-2">{h}</TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {previewData.slice(0, 50).map((row, idx) => (
+                      <TableRow key={idx} className={!row._valid ? 'bg-red-950/20' : row._isDuplicate ? 'bg-amber-950/20' : 'hover:bg-white/[0.02]'}>
+                        <TableCell className="text-xs text-gray-500 px-3 py-2">{row._rowIndex}</TableCell>
+                        <TableCell className="text-xs text-white px-3 py-2 font-mono">{row.employee_code || '—'}</TableCell>
+                        <TableCell className="text-xs text-gray-300 px-3 py-2">{row.date || '—'}</TableCell>
+                        <TableCell className="text-xs text-gray-300 px-3 py-2">{row.check_in_time || '—'}</TableCell>
+                        <TableCell className="text-xs text-gray-300 px-3 py-2">{row.check_out_time || '—'}</TableCell>
+                        <TableCell className="px-3 py-2">
+                          {!row._valid ? (
+                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0"><XCircle className="h-3 w-3 mr-0.5" /> {row._error}</Badge>
+                          ) : row._isDuplicate ? (
+                            <Badge variant="warning" className="text-[10px] px-1.5 py-0"><AlertCircle className="h-3 w-3 mr-0.5" /> Duplicate</Badge>
+                          ) : (
+                            <CheckCircle2 className="h-4 w-4" style={{ color: '#22C55E' }} />
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              {previewData.length > 50 && <p className="text-xs mt-2" style={{ color: '#6B7280' }}>Showing 50 of {previewData.length} records</p>}
+            </Section>
+          )}
+        </>
+      )}
+
+      {/* ================================================================== */}
+      {/* SETTINGS TAB                                                        */}
+      {/* ================================================================== */}
+      {activeTab === 'settings' && (
+        <>
+          {/* Push receiver info */}
+          <Section
+            icon={<Radio className="h-5 w-5 text-[#22C55E]" />}
+            title="Push Receiver Configuration"
+            description="Configure your eSSL FACE-MB160 device to push data to this server"
+          >
+            <div className="space-y-4">
+              <div className="rounded-lg p-4 border border-[#2A2A2A] space-y-3" style={{ background: '#0F0F0F' }}>
+                <p className="text-sm font-medium text-white">Device Setup Instructions</p>
+                <div className="space-y-2 text-xs" style={{ color: '#9CA3AF' }}>
+                  <p>1. On the device, go to <span className="text-white font-medium">COMM → Cloud Server Setting</span></p>
+                  <p>2. Set <span className="text-white font-medium">Connection Mode</span> to <span className="text-[#22C55E]">ADMS</span> or <span className="text-[#22C55E]">Cloud Server</span></p>
+                  <p>3. Set <span className="text-white font-medium">Server Address</span> to:</p>
+                  <code className="block px-3 py-2 rounded-lg text-[#22C55E] text-sm" style={{ background: '#22C55E0D', border: '1px solid #22C55E20' }}>
+                    {typeof window !== 'undefined' ? window.location.hostname : 'your-domain.com'}
+                  </code>
+                  <p>4. Set <span className="text-white font-medium">Port</span> to: <span className="text-[#22C55E]">{typeof window !== 'undefined' && window.location.protocol === 'https:' ? '443' : '80'}</span></p>
+                  <p>5. Enable the connection and the device will register automatically.</p>
+                </div>
+              </div>
+
+              <div className="rounded-lg p-4 border border-[#2A2A2A] space-y-3" style={{ background: '#0F0F0F' }}>
+                <p className="text-sm font-medium text-white">Test with curl</p>
+                <div className="space-y-2">
+                  <p className="text-xs" style={{ color: '#9CA3AF' }}>Simulate device handshake:</p>
+                  <code className="block px-3 py-2 rounded-lg text-xs break-all" style={{ background: '#1A1A1A', color: '#60A5FA', border: '1px solid #2A2A2A' }}>
+                    curl &quot;{typeof window !== 'undefined' ? window.location.origin : ''}/iclock/cdata?SN=TEST001&options=all&quot;
+                  </code>
+                  <p className="text-xs mt-3" style={{ color: '#9CA3AF' }}>Simulate ATTLOG push:</p>
+                  <code className="block px-3 py-2 rounded-lg text-xs break-all" style={{ background: '#1A1A1A', color: '#60A5FA', border: '1px solid #2A2A2A' }}>
+                    {`curl -X POST "${typeof window !== 'undefined' ? window.location.origin : ''}/iclock/cdata?SN=TEST001&table=ATTLOG&Stamp=1" -H "Content-Type: text/plain" -d "1\\t2026-07-11 09:00:00\\t0\\t15\\t\\t0\\t0\\t0\\t0\\t0"`}
+                  </code>
+                </div>
+              </div>
+            </div>
+          </Section>
+
+          {/* Legacy ESSL settings */}
+          <Section
+            icon={<Settings className="h-5 w-5 text-[#60A5FA]" />}
+            title="ESSL Connection Settings"
+            description="Legacy connection settings for manual sync and API key management"
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-gray-300">Portal URL</Label>
+                  <Input value={settings.portalUrl} onChange={e => setSettings(s => ({ ...s, portalUrl: e.target.value }))} placeholder="https://essl.company.com/api" className="bg-[#0F0F0F] border-[#2A2A2A] text-white text-sm" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-gray-300">API Key</Label>
+                  <div className="relative">
+                    <Input type={showApiKey ? 'text' : 'password'} value={settings.apiKey} onChange={e => setSettings(s => ({ ...s, apiKey: e.target.value }))} placeholder="essl_sk_live_..." className="bg-[#0F0F0F] border-[#2A2A2A] text-white text-sm pr-10" />
+                    <button type="button" onClick={() => setShowApiKey(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
+                      {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-gray-300">Device IP</Label>
+                  <Input value={settings.deviceIp} onChange={e => setSettings(s => ({ ...s, deviceIp: e.target.value }))} placeholder="192.168.1.100" className="bg-[#0F0F0F] border-[#2A2A2A] text-white text-sm" />
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 rounded-lg" style={{ background: '#0F0F0F', border: '1px solid #2A2A2A' }}>
+                  <div>
+                    <p className="text-sm font-medium text-white">Auto-Sync</p>
+                    <p className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>Sync at set intervals</p>
+                  </div>
+                  <Switch checked={settings.autoSyncEnabled} onCheckedChange={v => setSettings(s => ({ ...s, autoSyncEnabled: v }))} />
+                </div>
+                {settings.autoSyncEnabled && (
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-gray-300">Interval</Label>
+                    <Select value={settings.syncInterval} onValueChange={v => setSettings(s => ({ ...s, syncInterval: v }))}>
+                      <SelectTrigger className="bg-[#0F0F0F] border-[#2A2A2A] text-white text-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-[#1A1A1A] border-[#2A2A2A] text-white">
+                        {['5', '10', '15', '30', '60'].map(v => (
+                          <SelectItem key={v} value={v}>{v === '60' ? 'Every 1 hour' : `Every ${v} minutes`}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                <Button onClick={handleSaveSettings} disabled={settingsLoading} className="w-full mt-2" style={{ background: '#60A5FA', color: '#000' }}>
+                  {settingsLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : settingsSaved ? <CheckCircle2 className="h-4 w-4 mr-2" style={{ color: '#16A34A' }} /> : <Settings className="h-4 w-4 mr-2" />}
+                  {settingsLoading ? 'Saving...' : settingsSaved ? 'Saved!' : 'Save Settings'}
+                </Button>
+              </div>
+            </div>
+          </Section>
+        </>
+      )}
 
     </div>
   )

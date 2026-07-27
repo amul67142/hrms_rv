@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
+import { apiFetch } from '@/lib/core/fetcher'
 import {
   Select,
   SelectContent,
@@ -78,7 +79,7 @@ export default function AddToolPage() {
 
     setSaving(true)
     try {
-      const res = await fetch('/api/tools', {
+      const res = await apiFetch('/api/tools', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),

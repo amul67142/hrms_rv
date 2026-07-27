@@ -5,6 +5,7 @@ import { Plus, Edit, Trash2, Eye, Download, Trash, CheckSquare, ChevronDown, Ale
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
+import { apiFetch } from '@/lib/core/fetcher'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -91,7 +92,7 @@ export default function EmployeesPage() {
     setLoading(true)
     try {
       const params = new URLSearchParams({ page: String(page), limit: String(pageSize), search })
-      const res = await fetch(`/api/employees?${params}`)
+      const res = await apiFetch(`/api/employees?${params}`)
       const result = await res.json()
       if (result.success) { setData(result.data); setTotal(result.total) }
     } catch (_e) {
@@ -110,7 +111,7 @@ export default function EmployeesPage() {
     setActionLoading(true)
     try {
       const url = hard ? `/api/employees/${target.id}?hard=true` : `/api/employees/${target.id}`
-      const res = await fetch(url, { method: 'DELETE' })
+      const res = await apiFetch(url, { method: 'DELETE' })
       const result = await res.json()
       if (result.success) {
         toast({ title: 'Done', description: result.message })
@@ -132,7 +133,7 @@ export default function EmployeesPage() {
     if (!target) return
     setActionLoading(true)
     try {
-      const res = await fetch(`/api/employees/${target.id}`, {
+      const res = await apiFetch(`/api/employees/${target.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
@@ -159,7 +160,7 @@ export default function EmployeesPage() {
     setBulkLoading(true)
     try {
       const url = hard ? '/api/employees/bulk-delete?hard=true' : '/api/employees/bulk-delete'
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: Array.from(selectedIds) }),
@@ -187,7 +188,7 @@ export default function EmployeesPage() {
     setBulkLoading(true)
     let success = 0; let failed = 0
     for (const id of Array.from(selectedIds)) {
-      const res = await fetch(`/api/employees/${id}`, {
+      const res = await apiFetch(`/api/employees/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: bulkStatus }),
@@ -346,7 +347,7 @@ export default function EmployeesPage() {
   // Quick status change without dialog (from dropdown)
   const handleQuickStatus = async (id: string, status: EmployeeStatus) => {
     try {
-      const res = await fetch(`/api/employees/${id}`, {
+      const res = await apiFetch(`/api/employees/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),

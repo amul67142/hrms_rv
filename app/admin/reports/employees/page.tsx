@@ -13,6 +13,7 @@ import Link from 'next/link'
 import { formatDate } from '@/lib/core/utils'
 import { useToast } from '@/components/ui/use-toast'
 import type { EmployeeStatus } from '@/types'
+import { apiFetch } from '@/lib/core/fetcher'
 
 interface EmployeeRecord {
   id: string
@@ -83,7 +84,7 @@ export default function EmployeeReportPage() {
       if (department !== 'all') params.set('department', department)
       if (status !== 'all') params.set('status', status)
 
-      const res = await fetch(`/api/reports/employees?${params}`)
+      const res = await apiFetch(`/api/reports/employees?${params}`)
       const result = await res.json()
       if (result.success) {
         setData(result.data)
@@ -119,7 +120,7 @@ export default function EmployeeReportPage() {
       if (department !== 'all') params.set('department', department)
       if (status !== 'all') params.set('status', status)
 
-      const res = await fetch(`/api/reports/employees?${params}`)
+      const res = await apiFetch(`/api/reports/employees?${params}`)
       if (!res.ok) throw new Error('Export failed')
 
       const blob = await res.blob()

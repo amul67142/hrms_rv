@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/components/ui/use-toast'
 
 import Link from 'next/link'
+import { apiFetch } from '@/lib/core/fetcher'
 
 interface EditEmployeeData {
   employeeCode: string
@@ -70,7 +71,7 @@ export default function EditEmployeePage() {
   React.useEffect(() => {
     const fetchDepartments = async () => {
       try {
-        const res = await fetch('/api/departments')
+        const res = await apiFetch('/api/departments')
         const json = await res.json()
         if (json.success && Array.isArray(json.data)) {
           setDepartments(json.data)
@@ -87,7 +88,7 @@ export default function EditEmployeePage() {
   React.useEffect(() => {
     const fetchEmployee = async () => {
       try {
-        const res = await fetch(`/api/employees/${params.id}`)
+        const res = await apiFetch(`/api/employees/${params.id}`)
         const data = await res.json()
         if (data.success) {
           const emp = data.data
@@ -141,7 +142,7 @@ export default function EditEmployeePage() {
     e.preventDefault()
     setSubmitting(true)
     try {
-      const res = await fetch(`/api/employees/${params.id}`, {
+      const res = await apiFetch(`/api/employees/${params.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -164,7 +165,7 @@ export default function EditEmployeePage() {
     if (!newPassword || newPassword.length < 6) return
     setResetting(true)
     try {
-      const res = await fetch(`/api/employees/${params.id}/reset-password`, {
+      const res = await apiFetch(`/api/employees/${params.id}/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: newPassword }),
@@ -187,13 +188,13 @@ export default function EditEmployeePage() {
     setSendingEmail(true)
     try {
       // First update the password
-      await fetch(`/api/employees/${params.id}/reset-password`, {
+      await apiFetch(`/api/employees/${params.id}/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: newPassword }),
       })
       // Then send the credentials email
-      const res = await fetch(`/api/employees/${params.id}/send-credentials`, {
+      const res = await apiFetch(`/api/employees/${params.id}/send-credentials`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: newPassword }),

@@ -4,6 +4,7 @@ import { getToken } from '@/lib/core/token'
 import { z } from 'zod'
 import { encrypt } from '@/lib/core/crypto'
 import { maskPassword } from '@/lib/core/crypto'
+import { invalidate } from '@/lib/core/cache'
 
 export const dynamic = 'force-dynamic'
 
@@ -72,6 +73,7 @@ export async function PUT(
       updateData.password = null // clear old plain text if any
     }
 
+    invalidate('tools:', true)
     const tool = await prisma.tool.update({
       where: { id: params.id },
       data: updateData,
@@ -113,6 +115,7 @@ export async function DELETE(
     }
 
     await prisma.tool.delete({ where: { id: params.id } })
+    invalidate('tools:', true)
 
     await prisma.auditLog.create({
       data: {

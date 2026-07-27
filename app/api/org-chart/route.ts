@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
+import { cached, invalidate, TTL } from '@/lib/core/cache'
 import type { Role } from '@/types'
 
 export const dynamic = 'force-dynamic'
@@ -64,24 +65,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
     }
 
-    const employees = await prisma.employee.findMany({
-      where: { status: { in: ['ACTIVE', 'INACTIVE', 'ON_LEAVE'] } },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        employeeCode: true,
-        department: true,
-        designation: true,
-        profileImage: true,
-        phone: true,
-        departmentRef: {
-          select: { managerId: true },
+    // Same org-wide data for every admin/HR viewer; cache the (cross-region)
+    // query. Invalidated by invalidateEmployeeCaches() on any employee write.
+    const employees = await cached('orgchart:all', TTL.medium, () =>
+      prisma.employee.findMany({
+        where: { status: { in: ['ACTIVE', 'INACTIVE', 'ON_LEAVE'] } },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          employeeCode: true,
+          department: true,
+          designation: true,
+          profileImage: true,
+          phone: true,
+          departmentRef: {
+            select: { managerId: true },
+          },
         },
-      },
-      orderBy: { department: 'asc' },
-    })
+        orderBy: { department: 'asc' },
+      })
+    )
 
     // Build a map of employee IDs to names for manager lookup
     const employeeNameMap = new Map<string, string>()
@@ -182,6 +187,8 @@ export async function PATCH(request: NextRequest) {
       where: { id: employeeId },
       data: { departmentId: targetDepartmentId },
     })
+
+    invalidate('orgchart:all')
 
     return NextResponse.json({ success: true })
   } catch (error) {

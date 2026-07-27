@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/use-toast'
+import { apiFetch } from '@/lib/core/fetcher'
 
 const actionColors: Record<string, string> = {
   CREATE: '#4ADE80', UPDATE: '#60A5FA', DELETE: '#F87171',
@@ -53,7 +54,7 @@ export default function AuditLogsPage() {
       if (actionFilter) params.set('action', actionFilter)
       if (search) params.set('search', search)
 
-      const res = await fetch(`/api/audit-log?${params}`)
+      const res = await apiFetch(`/api/audit-log?${params}`)
       const json = await res.json()
       if (json.success) {
         setLogs(json.data || [])

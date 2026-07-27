@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { apiFetch } from '@/lib/core/fetcher'
 import {
   Download,
   FileSpreadsheet,
@@ -500,7 +501,7 @@ function AttendanceReport() {
   const [previewLoading, setPreviewLoading] = React.useState(false)
 
   React.useEffect(() => {
-    fetch('/api/departments')
+    apiFetch('/api/departments')
       .then((r) => r.json())
       .then((d) => { if (d.success) setDepartments(d.data) })
       .catch(() => {})
@@ -515,7 +516,7 @@ function AttendanceReport() {
       if (month) params.set('month', month)
       if (year) params.set('year', year)
       if (department !== 'all') params.set('department', department)
-      const res = await fetch(`/api/reports/attendance?${params}`)
+      const res = await apiFetch(`/api/reports/attendance?${params}`)
       const json = await res.json()
       setPreviewData(json.success ? json.data ?? [] : [])
     } catch (_e) {
@@ -533,7 +534,7 @@ function AttendanceReport() {
       if (month) params.set('month', month)
       if (year) params.set('year', year)
       if (department !== 'all') params.set('department', department)
-      const res = await fetch(`/api/reports/attendance?${params}`)
+      const res = await apiFetch(`/api/reports/attendance?${params}`)
       if (format === 'excel') {
         const blob = await res.blob()
         const url = URL.createObjectURL(blob)
@@ -650,7 +651,7 @@ function LeaveReport() {
   const [previewLoading, setPreviewLoading] = React.useState(false)
 
   React.useEffect(() => {
-    fetch('/api/departments')
+    apiFetch('/api/departments')
       .then((r) => r.json())
       .then((d) => { if (d.success) setDepartments(d.data) })
       .catch(() => {})
@@ -667,7 +668,7 @@ function LeaveReport() {
       if (leaveType !== 'all') params.set('leaveType', leaveType)
       if (status !== 'all') params.set('status', status)
       if (department !== 'all') params.set('department', department)
-      const res = await fetch(`/api/reports/leave?${params}`)
+      const res = await apiFetch(`/api/reports/leave?${params}`)
       const json = await res.json()
       setPreviewData(json.success ? json.data ?? [] : [])
     } catch (_e) {
@@ -687,7 +688,7 @@ function LeaveReport() {
       if (leaveType !== 'all') params.set('leaveType', leaveType)
       if (status !== 'all') params.set('status', status)
       if (department !== 'all') params.set('department', department)
-      const res = await fetch(`/api/reports/leave?${params}`)
+      const res = await apiFetch(`/api/reports/leave?${params}`)
       if (format === 'excel') {
         const blob = await res.blob()
         const url = URL.createObjectURL(blob)
@@ -813,7 +814,7 @@ function PayrollReport() {
   const [summary, setSummary] = React.useState({ total: 0, gross: 0, net: 0, deductions: 0 })
 
   React.useEffect(() => {
-    fetch('/api/departments')
+    apiFetch('/api/departments')
       .then((r) => r.json())
       .then((d) => { if (d.success) setDepartments(d.data) })
       .catch(() => {})
@@ -828,7 +829,7 @@ function PayrollReport() {
       if (month) params.set('month', month)
       if (year) params.set('year', year)
       if (department !== 'all') params.set('department', department)
-      const res = await fetch(`/api/reports/payroll?${params}`)
+      const res = await apiFetch(`/api/reports/payroll?${params}`)
       const json = await res.json()
       if (json.success) {
         setPreviewData(json.data ?? [])
@@ -858,7 +859,7 @@ function PayrollReport() {
       if (month) params.set('month', month)
       if (year) params.set('year', year)
       if (department !== 'all') params.set('department', department)
-      const res = await fetch(`/api/reports/payroll?${params}`)
+      const res = await apiFetch(`/api/reports/payroll?${params}`)
       if (format === 'excel') {
         const blob = await res.blob()
         const url = URL.createObjectURL(blob)
@@ -987,7 +988,7 @@ function EmployeeReport() {
   const [summary, setSummary] = React.useState({ total: 0, active: 0, inactive: 0 })
 
   React.useEffect(() => {
-    fetch('/api/departments')
+    apiFetch('/api/departments')
       .then((r) => r.json())
       .then((d) => { if (d.success) setDepartments(d.data) })
       .catch(() => {})
@@ -1001,7 +1002,7 @@ function EmployeeReport() {
       const params = new URLSearchParams()
       if (department !== 'all') params.set('department', department)
       if (status !== 'all') params.set('status', status)
-      const res = await fetch(`/api/reports/employees?${params}`)
+      const res = await apiFetch(`/api/reports/employees?${params}`)
       const json = await res.json()
       if (json.success) {
         setPreviewData(json.data ?? [])
@@ -1029,7 +1030,7 @@ function EmployeeReport() {
       const params = new URLSearchParams({ export: format })
       if (department !== 'all') params.set('department', department)
       if (status !== 'all') params.set('status', status)
-      const res = await fetch(`/api/reports/employees?${params}`)
+      const res = await apiFetch(`/api/reports/employees?${params}`)
       if (format === 'excel') {
         const blob = await res.blob()
         const url = URL.createObjectURL(blob)
@@ -1133,12 +1134,12 @@ function ToolAssignmentReport() {
   const [loaded, setLoaded] = React.useState(false)
 
   React.useEffect(() => {
-    fetch('/api/departments')
+    apiFetch('/api/departments')
       .then((r) => r.json())
       .then((d) => { if (d.success) setDepartments(d.data) })
       .catch(() => {})
     // Load tool assignments (tool-requests)
-    fetch('/api/tool-requests')
+    apiFetch('/api/tool-requests')
       .then((r) => r.json())
       .then((d) => {
         if (d.success && Array.isArray(d.data)) {
@@ -1269,11 +1270,11 @@ function LearningRequestReport() {
   const [loaded, setLoaded] = React.useState(false)
 
   React.useEffect(() => {
-    fetch('/api/departments')
+    apiFetch('/api/departments')
       .then((r) => r.json())
       .then((d) => { if (d.success) setDepartments(d.data) })
       .catch(() => {})
-    fetch('/api/learning-requests')
+    apiFetch('/api/learning-requests')
       .then((r) => r.json())
       .then((d) => {
         if (d.success && Array.isArray(d.data)) {

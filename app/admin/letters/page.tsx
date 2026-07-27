@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { apiFetch } from '@/lib/core/fetcher'
 import {
   FileText, Plus, Eye, Trash2, Edit, Download, ChevronDown,
   Mail, Layers, Search, X, Bold, Italic, Underline,
@@ -254,7 +255,7 @@ export default function AdminLettersPage() {
   // ── Fetchers ──────────────────────────────────────────────────────────────
   const fetchLetters = React.useCallback(async () => {
     try {
-      const res = await fetch('/api/letters')
+      const res = await apiFetch('/api/letters')
       const data = await res.json()
       if (data.success) setLetters(data.data)
     } catch (_e) {
@@ -266,7 +267,7 @@ export default function AdminLettersPage() {
 
   const fetchEmployees = React.useCallback(async () => {
     try {
-      const res = await fetch('/api/employees?limit=1000')
+      const res = await apiFetch('/api/employees?limit=1000')
       const data = await res.json()
       if (data.success) setEmployees(data.data)
     } catch (_e) { /* silent */ }
@@ -274,7 +275,7 @@ export default function AdminLettersPage() {
 
   const fetchCompanySettings = React.useCallback(async () => {
     try {
-      const res = await fetch('/api/settings/company')
+      const res = await apiFetch('/api/settings/company')
       const data = await res.json()
       if (data.success) setCompanySettings(data.data || {})
     } catch (_e) { /* silent */ }
@@ -362,7 +363,7 @@ export default function AdminLettersPage() {
     }
     setSubmitting(true)
     try {
-      const res = await fetch('/api/letters', {
+      const res = await apiFetch('/api/letters', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -391,7 +392,7 @@ export default function AdminLettersPage() {
 
   const handleStatusChange = async (id: string, status: string) => {
     try {
-      const res = await fetch(`/api/letters/${id}`, {
+      const res = await apiFetch(`/api/letters/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
@@ -411,7 +412,7 @@ export default function AdminLettersPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this letter?')) return
     try {
-      const res = await fetch(`/api/letters/${id}`, { method: 'DELETE' })
+      const res = await apiFetch(`/api/letters/${id}`, { method: 'DELETE' })
       const data = await res.json()
       if (data.success) {
         toast({ title: 'Success', description: 'Letter deleted' })

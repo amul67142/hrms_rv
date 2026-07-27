@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { DataTable, Column } from '@/components/data-table'
+import { apiFetch } from '@/lib/core/fetcher'
 import {
   Dialog,
   DialogContent,
@@ -44,7 +45,7 @@ export default function HolidaysPage() {
   const fetchHolidays = React.useCallback(async () => {
     try {
       setLoading(true)
-      const res = await fetch(`/api/holidays?year=${year}`)
+      const res = await apiFetch(`/api/holidays?year=${year}`)
       const json = await res.json()
       if (json.success) {
         setHolidays(json.data)
@@ -144,7 +145,7 @@ export default function HolidaysPage() {
       const url = editingHoliday ? `/api/holidays/${editingHoliday.id}` : '/api/holidays'
       const method = editingHoliday ? 'PUT' : 'POST'
       
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -187,7 +188,7 @@ export default function HolidaysPage() {
     if (!selectedHoliday) return
 
     try {
-      const res = await fetch(`/api/holidays/${selectedHoliday.id}`, {
+      const res = await apiFetch(`/api/holidays/${selectedHoliday.id}`, {
         method: 'DELETE',
       })
       const json = await res.json()

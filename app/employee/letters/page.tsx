@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/use-toast'
 import { formatDate } from '@/lib/core/utils'
+import { apiFetch } from '@/lib/core/fetcher'
 
 const TYPE_COLORS: Record<string, string> = {
   OFFER: '#8B5CF6',
@@ -48,7 +49,7 @@ export default function EmployeeLettersPage() {
 
   const fetchLetters = React.useCallback(async () => {
     try {
-      const res = await fetch('/api/letters')
+      const res = await apiFetch('/api/letters')
       const data = await res.json()
       if (data.success) setLetters(data.data)
     } catch (_e) {
@@ -75,7 +76,7 @@ export default function EmployeeLettersPage() {
     if (!selectedLetter) return
     setResponding(true)
     try {
-      const res = await fetch(`/api/letters/${selectedLetter.id}`, {
+      const res = await apiFetch(`/api/letters/${selectedLetter.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),

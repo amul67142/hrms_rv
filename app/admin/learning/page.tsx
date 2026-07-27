@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { useToast } from '@/components/ui/use-toast'
 import Link from 'next/link'
+import { apiFetch } from '@/lib/core/fetcher'
 import {
   Dialog,
   DialogContent,
@@ -117,7 +118,7 @@ export default function AdminLearningPage() {
       if (search) params.set('search', search)
       if (categoryFilter !== 'All') params.set('category', categoryFilter)
 
-      const res = await fetch(`/api/learning?${params}`)
+      const res = await apiFetch(`/api/learning?${params}`)
       const json = await res.json()
       // Only use API data if successful, otherwise show empty state
       if (json.success) {
@@ -154,7 +155,7 @@ export default function AdminLearningPage() {
   async function confirmDelete() {
     if (!selectedModule) return
     try {
-      const res = await fetch(`/api/learning/${selectedModule.id}`, { method: 'DELETE' })
+      const res = await apiFetch(`/api/learning/${selectedModule.id}`, { method: 'DELETE' })
       const json = await res.json()
       if (json.success) {
         setData(prev => prev.filter(m => m.id !== selectedModule.id))
@@ -172,7 +173,7 @@ export default function AdminLearningPage() {
   async function handleFeaturedToggle(mod: LearningModule) {
     const newFeatured = !mod.isFeatured
     try {
-      await fetch(`/api/learning/${mod.id}`, {
+      await apiFetch(`/api/learning/${mod.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isFeatured: newFeatured }),
@@ -187,7 +188,7 @@ export default function AdminLearningPage() {
   async function handleActiveToggle(mod: LearningModule) {
     const newActive = !mod.isActive
     try {
-      await fetch(`/api/learning/${mod.id}`, {
+      await apiFetch(`/api/learning/${mod.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: newActive }),

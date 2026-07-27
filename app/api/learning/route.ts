@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 import { z } from 'zod'
+import { cached, invalidate, TTL } from '@/lib/core/cache'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,10 +45,19 @@ export async function GET(request: NextRequest) {
     }
     if (category) where.category = category
 
-    const modules = await prisma.learningModule.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-    })
+    const runQuery = () =>
+      prisma.learningModule.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+      })
+
+    // The catalog varies only by role (employees see active only). Cache the
+    // common unfiltered page load per role bucket; skip cache when filtering.
+    const roleBucket = userRole === 'EMPLOYEE' ? 'emp' : 'staff'
+    const canCache = !search && !category
+    const modules = canCache
+      ? await cached(`learning:${roleBucket}`, TTL.medium, runQuery)
+      : await runQuery()
 
     return NextResponse.json({ success: true, data: modules })
   } catch (error) {
@@ -89,6 +99,8 @@ export async function POST(request: NextRequest) {
         newValue: JSON.stringify({ moduleId: createdModule.id, title: createdModule.title }),
       },
     })
+
+    invalidate('learning:', true)
 
     return NextResponse.json({ success: true, data: createdModule })
   } catch (error) {

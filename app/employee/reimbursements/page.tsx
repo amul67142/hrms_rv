@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { useToast } from '@/components/ui/use-toast'
 import { formatDate, formatCurrency } from '@/lib/core/utils'
+import { apiFetch } from '@/lib/core/fetcher'
 
 type ReimbursementStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'PAID'
 
@@ -51,7 +52,7 @@ export default function EmployeeReimbursementsPage() {
   const fetchData = React.useCallback(async () => {
     try {
       setLoading(true)
-      const res = await fetch('/api/reimbursements')
+      const res = await apiFetch('/api/reimbursements')
       const json = await res.json()
       if (json.success) {
         setData(json.data)
@@ -70,7 +71,7 @@ export default function EmployeeReimbursementsPage() {
   const handleCancel = async (item: Reimbursement) => {
     if (!confirm(`Cancel reimbursement "${item.title}"?`)) return
     try {
-      const res = await fetch(`/api/reimbursements/${item.id}`, { method: 'DELETE' })
+      const res = await apiFetch(`/api/reimbursements/${item.id}`, { method: 'DELETE' })
       const json = await res.json()
       if (json.success) {
         toast({ title: 'Cancelled', description: 'Reimbursement has been cancelled.' })

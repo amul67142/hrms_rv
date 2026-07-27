@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
 import bcrypt from 'bcryptjs'
+import { invalidateEmployeeCaches } from '@/lib/core/cache'
 import type { Role } from '@/types'
 
 export const dynamic = 'force-dynamic'
@@ -179,6 +180,8 @@ export async function POST(request: NextRequest) {
         newValue: JSON.stringify({ imported: createdEmployees, failed: failedRows }),
       },
     })
+
+    invalidateEmployeeCaches()
 
     return NextResponse.json({
       success: true,

@@ -1,16 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
+import { cached, invalidate, TTL } from '@/lib/core/cache'
 import type { Role } from '@/types'
 
 export const dynamic = 'force-dynamic'
 
+const COMPANY_SETTINGS_CACHE_KEY = 'company:settings'
+
 export async function GET() {
   try {
-    let settings = await prisma.companySetting.findFirst()
+    // Company settings are read on nearly every page but change almost never.
+    const data = await cached(COMPANY_SETTINGS_CACHE_KEY, TTL.long, async () => {
+      let settings = await prisma.companySetting.findFirst()
 
-    if (!settings) {
-      settings = await prisma.companySetting.create({
+      if (!settings) {
+        settings = await prisma.companySetting.create({
         data: {
           companyName: 'My Company',
           workingDaysPerWeek: 5,
@@ -23,11 +28,14 @@ export async function GET() {
           professionalTaxRate: 200,
           tdsRate: 10,
           leaveEncashmentRate: 30,
-        },
-      })
-    }
+          },
+        })
+      }
 
-    return NextResponse.json({ success: true, data: settings })
+      return settings
+    })
+
+    return NextResponse.json({ success: true, data })
   } catch (error) {
     console.error('GET /api/company-settings error:', error)
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
@@ -72,6 +80,9 @@ export async function PUT(request: NextRequest) {
         newValue: JSON.stringify(body),
       },
     })
+
+    invalidate(COMPANY_SETTINGS_CACHE_KEY)
+    invalidate('settings:salarySlip') // same underlying companySetting row
 
     return NextResponse.json({ success: true, data: updated })
   } catch (error) {

@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { useToast } from '@/components/ui/use-toast'
+import { apiFetch } from '@/lib/core/fetcher'
 
 interface SalarySlipConfig {
   showWatermark: boolean
@@ -49,7 +50,7 @@ export default function SalarySlipSettingsPage() {
   async function fetchConfig() {
     setLoading(true)
     try {
-      const res = await fetch('/api/settings/salary-slip')
+      const res = await apiFetch('/api/settings/salary-slip')
       const json = await res.json()
       if (json.success) {
         setConfig(json.data)
@@ -65,7 +66,7 @@ export default function SalarySlipSettingsPage() {
     e.preventDefault()
     setSaving(true)
     try {
-      const res = await fetch('/api/settings/salary-slip', {
+      const res = await apiFetch('/api/settings/salary-slip', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

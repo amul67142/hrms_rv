@@ -5,6 +5,7 @@ import { Plus, Search, Edit, Trash2, Key, Globe, Monitor, Lock, Link2, FolderOpe
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { apiFetch } from '@/lib/core/fetcher'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -142,7 +143,7 @@ export default function AdminToolsPage() {
       if (typeFilter !== 'all') params.set('type', typeFilter)
       if (categoryFilter !== 'all') params.set('category', categoryFilter)
 
-      const res = await fetch(`/api/tools?${params}`)
+      const res = await apiFetch(`/api/tools?${params}`)
       const json = await res.json()
       // Only use API data if it's successful, otherwise show empty state
       if (json.success) {
@@ -205,7 +206,7 @@ export default function AdminToolsPage() {
 
   async function handleApproveReject(toolId: string, employeeId: string, action: 'APPROVED' | 'REJECTED') {
     try {
-      const res = await fetch(`/api/tools/${toolId}/request`, {
+      const res = await apiFetch(`/api/tools/${toolId}/request`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ employeeId, action }),
@@ -231,7 +232,7 @@ export default function AdminToolsPage() {
   async function handleDecryptPassword(toolId: string) {
     setDecrypting(prev => ({ ...prev, [toolId]: true }))
     try {
-      const res = await fetch(`/api/tools/${toolId}/decrypt`, { method: 'POST' })
+      const res = await apiFetch(`/api/tools/${toolId}/decrypt`, { method: 'POST' })
       const json = await res.json()
       if (json.success) {
         setDecryptedPasswords(prev => ({ ...prev, [toolId]: json.password }))
@@ -274,7 +275,7 @@ export default function AdminToolsPage() {
   async function confirmDelete() {
     if (!selectedTool) return
     try {
-      const res = await fetch(`/api/tools/${selectedTool.id}`, { method: 'DELETE' })
+      const res = await apiFetch(`/api/tools/${selectedTool.id}`, { method: 'DELETE' })
       const json = await res.json()
       if (json.success) {
         setData(prev => prev.filter(t => t.id !== selectedTool.id))
@@ -292,7 +293,7 @@ export default function AdminToolsPage() {
   async function handleSaveEdit() {
     if (!selectedTool) return
     try {
-      const res = await fetch(`/api/tools/${selectedTool.id}`, {
+      const res = await apiFetch(`/api/tools/${selectedTool.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editForm),
@@ -314,7 +315,7 @@ export default function AdminToolsPage() {
   async function handleSharedToggle(tool: Tool) {
     const newShared = !tool.isShared
     try {
-      await fetch(`/api/tools/${tool.id}`, {
+      await apiFetch(`/api/tools/${tool.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isShared: newShared }),

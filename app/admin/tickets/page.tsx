@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/components/ui/use-toast'
 import { formatDate } from '@/lib/core/utils'
+import { apiFetch } from '@/lib/core/fetcher'
 
 const CATEGORY_COLORS: Record<string, string> = {
   GENERAL: '#8B5CF6',
@@ -69,7 +70,7 @@ export default function AdminTicketsPage() {
 
   const fetchTickets = React.useCallback(async () => {
     try {
-      const res = await fetch('/api/tickets')
+      const res = await apiFetch('/api/tickets')
       const data = await res.json()
       if (data.success) setTickets(data.data)
     } catch (_e) {
@@ -106,7 +107,7 @@ export default function AdminTicketsPage() {
     if (!selectedTicket) return
     setSubmitting(true)
     try {
-      const res = await fetch(`/api/tickets/${selectedTicket.id}`, {
+      const res = await apiFetch(`/api/tickets/${selectedTicket.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),

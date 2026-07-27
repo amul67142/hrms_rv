@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { apiFetch } from '@/lib/core/fetcher'
 import {
   Select,
   SelectContent,
@@ -79,7 +80,7 @@ export default function SubmitReimbursementPage() {
       // For now, we store the filename as a placeholder.
       const receiptUrl = receiptFile ? `uploads/${receiptFile.name}` : undefined
 
-      const res = await fetch('/api/reimbursements', {
+      const res = await apiFetch('/api/reimbursements', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

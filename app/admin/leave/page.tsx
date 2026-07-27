@@ -15,6 +15,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { formatDate } from '@/lib/core/utils'
 import { format, startOfMonth, endOfMonth, subMonths, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, addWeeks, isWithinInterval } from 'date-fns'
 import type { LeaveRequest, LeaveStatus, LeaveType } from '@/types'
+import { apiFetch } from '@/lib/core/fetcher'
 
 const statusColors: Record<LeaveStatus, string> = {
   PENDING: 'pending',
@@ -87,7 +88,7 @@ export default function LeavePage() {
   const fetchLeaveRequests = React.useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/leave?limit=200')
+      const res = await apiFetch('/api/leave?limit=200')
       const json = await res.json()
       if (json.success) {
         setLeaveRequests(json.data || [])
@@ -110,7 +111,7 @@ export default function LeavePage() {
     await Promise.all(
       uniqueEmployeeIds.map(async (empId) => {
         try {
-          const res = await fetch(`/api/leave/balance/${empId}`)
+          const res = await apiFetch(`/api/leave/balance/${empId}`)
           const json = await res.json()
           if (json.success && json.data?.balances) {
             const typeMap: Record<string, { available: number; pending: number; entitled: number; taken: number }> = {}
@@ -404,7 +405,7 @@ export default function LeavePage() {
   const fetchEmployeeBalance = async (employeeId: string) => {
     setDialogBalance({ loading: true, balances: [] })
     try {
-      const res = await fetch(`/api/leave/balance/${employeeId}`)
+      const res = await apiFetch(`/api/leave/balance/${employeeId}`)
       const json = await res.json()
       if (json.success && json.data?.balances) {
         setDialogBalance({ loading: false, balances: json.data.balances })
@@ -420,7 +421,7 @@ export default function LeavePage() {
     if (!selectedRequest) return
     setActionLoading(true)
     try {
-      const res = await fetch(`/api/leave/${selectedRequest.id}`, {
+      const res = await apiFetch(`/api/leave/${selectedRequest.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

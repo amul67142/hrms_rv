@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { apiFetch } from '@/lib/core/fetcher'
 import {
   Dialog,
   DialogContent,
@@ -169,7 +170,7 @@ export default function EmployeeDetailPage() {
   React.useEffect(() => {
     const fetchEmployee = async () => {
       try {
-        const res = await fetch(`/api/employees/${params.id}`)
+        const res = await apiFetch(`/api/employees/${params.id}`)
         const data = await res.json()
         if (data.success) {
           setEmployee(data.data)
@@ -187,7 +188,7 @@ export default function EmployeeDetailPage() {
 
   const fetchLeaveBalances = React.useCallback(async () => {
     try {
-      const res = await fetch(`/api/leave/balance/${params.id}?year=${currentYear}`)
+      const res = await apiFetch(`/api/leave/balance/${params.id}?year=${currentYear}`)
       const data = await res.json()
       if (data.success) {
         setLeaveBalances(data.data.balances)
@@ -199,7 +200,7 @@ export default function EmployeeDetailPage() {
 
   const fetchLoginHistory = React.useCallback(async () => {
     try {
-      const res = await fetch(`/api/admin/employees/${params.id}/login-history`)
+      const res = await apiFetch(`/api/admin/employees/${params.id}/login-history`)
       const data = await res.json()
       if (data.success) {
         setLoginSessions(data.data.sessions)
@@ -213,7 +214,7 @@ export default function EmployeeDetailPage() {
   const fetchTimeline = React.useCallback(async () => {
     setTimelineLoading(true)
     try {
-      const res = await fetch(`/admin/employees/${params.id}/activity`)
+      const res = await apiFetch(`/admin/employees/${params.id}/activity`)
       const data = await res.json()
       if (data.success) {
         setTimeline(data.data.activities)
@@ -228,7 +229,7 @@ export default function EmployeeDetailPage() {
   const handleDelete = async () => {
     setDeleting(true)
     try {
-      const res = await fetch(`/api/employees/${params.id}`, { method: 'DELETE' })
+      const res = await apiFetch(`/api/employees/${params.id}`, { method: 'DELETE' })
       const data = await res.json()
       if (data.success) {
         toast({ title: 'Success', description: 'Employee deleted' })
@@ -246,7 +247,7 @@ export default function EmployeeDetailPage() {
   const handleResetPassword = async () => {
     setResetting(true)
     try {
-      const res = await fetch(`/api/employees/${params.id}/reset-password`, { method: 'POST' })
+      const res = await apiFetch(`/api/employees/${params.id}/reset-password`, { method: 'POST' })
       const data = await res.json()
       if (data.success) {
         setTempPassword(data.data.tempPassword)
@@ -272,7 +273,7 @@ export default function EmployeeDetailPage() {
     if (!tempPassword) return
     setSendingEmail(true)
     try {
-      const res = await fetch(`/api/employees/${params.id}/send-credentials`, {
+      const res = await apiFetch(`/api/employees/${params.id}/send-credentials`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: tempPassword }),
@@ -304,7 +305,7 @@ export default function EmployeeDetailPage() {
     if (!editingBalance) return
     setSavingBalance(true)
     try {
-      const res = await fetch(`/api/leave/balance/${params.id}`, {
+      const res = await apiFetch(`/api/leave/balance/${params.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -4,6 +4,7 @@ import { getToken } from '@/lib/core/token'
 import { z } from 'zod'
 import { encrypt } from '@/lib/core/crypto'
 import { maskPassword } from '@/lib/core/crypto'
+import { cached, invalidate, TTL } from '@/lib/core/cache'
 
 export const dynamic = 'force-dynamic'
 
@@ -54,10 +55,19 @@ export async function GET(request: NextRequest) {
       where.isShared = true
     }
 
-    const tools = await prisma.tool.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-    })
+    const runQuery = () =>
+      prisma.tool.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+      })
+
+    // Catalog varies only by role (employees see shared only). Cache the common
+    // unfiltered load per role bucket; skip cache when any filter is applied.
+    const roleBucket = userRole === 'EMPLOYEE' ? 'emp' : 'staff'
+    const canCache = !search && !category && !type
+    const tools = canCache
+      ? await cached(`tools:${roleBucket}`, TTL.medium, runQuery)
+      : await runQuery()
 
     const sanitized = tools.map(sanitizeTool)
     return NextResponse.json({ success: true, data: sanitized })
@@ -105,6 +115,8 @@ export async function POST(request: NextRequest) {
         newValue: JSON.stringify({ toolId: tool.id, name: tool.name }),
       },
     })
+
+    invalidate('tools:', true)
 
     return NextResponse.json({ success: true, data: sanitizeTool(tool) })
   } catch (error) {

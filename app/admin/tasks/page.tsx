@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/components/ui/use-toast'
+import { apiFetch } from '@/lib/core/fetcher'
 
 type TaskStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
@@ -59,7 +60,7 @@ export default function TasksPage() {
   const fetchTasks = React.useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/tasks')
+      const res = await apiFetch('/api/tasks')
       const json = await res.json()
       if (json.success) setTasks(json.data)
       else toast({ title: 'Error', description: json.error || 'Failed to load tasks', variant: 'destructive' })
@@ -70,7 +71,7 @@ export default function TasksPage() {
 
   const fetchDropdowns = async () => {
     try {
-      const [empRes, deptRes] = await Promise.all([fetch('/api/employees/list'), fetch('/api/departments')])
+      const [empRes, deptRes] = await Promise.all([apiFetch('/api/employees/list'), apiFetch('/api/departments')])
       if (empRes.ok) {
         const empJson = await empRes.json()
         if (empJson.success) setEmployees(empJson.data)
@@ -100,7 +101,7 @@ export default function TasksPage() {
     if (!form.assignedTo) { setError('Assignee is required'); return }
     setSaving(true); setError('')
     try {
-      const res = await fetch('/api/tasks', {
+      const res = await apiFetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, departmentId: form.departmentId || null, dueDate: form.dueDate || null }),
@@ -120,7 +121,7 @@ export default function TasksPage() {
   const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
     setStatusLoading(taskId)
     try {
-      const res = await fetch(`/api/tasks/${taskId}`, {
+      const res = await apiFetch(`/api/tasks/${taskId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
@@ -141,7 +142,7 @@ export default function TasksPage() {
     if (!taskToDelete) return
     setSaving(true)
     try {
-      const res = await fetch(`/api/tasks/${taskToDelete.id}`, { method: 'DELETE' })
+      const res = await apiFetch(`/api/tasks/${taskToDelete.id}`, { method: 'DELETE' })
       const json = await res.json()
       if (json.success) {
         toast({ title: 'Deleted', description: `"${taskToDelete.title}" removed` })

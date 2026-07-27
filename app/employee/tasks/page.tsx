@@ -4,6 +4,7 @@ import * as React from 'react'
 import { CheckSquare, Loader2, ChevronDown, ChevronUp, Clock, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { apiFetch } from '@/lib/core/fetcher'
 
 interface Task {
   id: string
@@ -59,7 +60,7 @@ export default function EmployeeTasksPage() {
     setLoading(true)
     setError('')
     try {
-      const res = await fetch('/api/tasks')
+      const res = await apiFetch('/api/tasks')
       const json = await res.json()
       if (json.success) setTasks(json.data)
       else setError(json.error || 'Failed to load tasks')
@@ -71,7 +72,7 @@ export default function EmployeeTasksPage() {
     setUpdatingId(taskId)
     setError('')
     try {
-      const res = await fetch(`/api/tasks/${taskId}`, {
+      const res = await apiFetch(`/api/tasks/${taskId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),

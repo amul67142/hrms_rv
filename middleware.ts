@@ -19,9 +19,10 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Allow NextAuth routes and static assets through without auth
+  // Allow NextAuth routes, static assets, and biometric device endpoints through without auth
   if (
     path.startsWith('/api/auth') ||
+    path.startsWith('/iclock') ||
     path.startsWith('/_next') ||
     path === '/favicon.ico' ||
     path === '/login' ||

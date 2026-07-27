@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/core/db'
 import { getToken } from '@/lib/core/token'
+import { invalidateEmployeeCaches } from '@/lib/core/cache'
 import type { Role } from '@/types'
 
 export const dynamic = 'force-dynamic'
@@ -124,6 +125,8 @@ export async function PATCH(
       },
     }).catch((_e) => {})
 
+    invalidateEmployeeCaches()
+
     return NextResponse.json({ success: true, data: employee })
   } catch (error) {
     console.error('PATCH /api/employees/[id] error:', error)
@@ -218,6 +221,8 @@ export async function DELETE(
         description: `${hard ? 'Hard' : 'Soft'} deleted employee ${employee.employeeCode} - ${employee.firstName} ${employee.lastName}`,
       },
     }).catch((_e) => {})
+
+    invalidateEmployeeCaches()
 
     return NextResponse.json({ success: true, message: hard ? 'Employee permanently deleted' : 'Employee deactivated' })
   } catch (error) {

@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { apiFetch } from '@/lib/core/fetcher'
 import {
   GitBranch,
   Users,
@@ -420,7 +421,7 @@ function DetailPanel({ employee, allEmployees, onClose, onUpdate }: DetailPanelP
     if (!employee) return
     setSaving(true)
     try {
-      const res = await fetch('/api/org-chart', {
+      const res = await apiFetch('/api/org-chart', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -712,7 +713,7 @@ export default function OrgChartPage() {
 
   const fetchData = React.useCallback(async () => {
     try {
-      const res = await fetch('/api/org-chart')
+      const res = await apiFetch('/api/org-chart')
       const result = await res.json()
       if (result.success) {
         setData(result.data)

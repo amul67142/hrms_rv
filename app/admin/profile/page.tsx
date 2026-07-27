@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { apiFetch } from '@/lib/core/fetcher'
 import {
   Mail, Phone, MapPin, Calendar, Briefcase, Building2, User,
   CreditCard, Shield, Edit2, Camera, Save, X, Key, ShieldCheck,
@@ -88,7 +89,7 @@ export default function AdminProfilePage() {
 
   const fetchProfile = React.useCallback(async () => {
     try {
-      const res = await fetch('/api/me')
+      const res = await apiFetch('/api/me')
       const data = await res.json()
       if (data.success) {
         setEmployee(data.data)
@@ -103,7 +104,7 @@ export default function AdminProfilePage() {
   const openHistory = () => {
     setHistoryOpen(true)
     setHistoryLoading(true)
-    fetch('/api/me/login-history?limit=20')
+    apiFetch('/api/me/login-history?limit=20')
       .then((r) => r.json())
       .then((d) => {
         if (d.success) setLoginHistory(d.data || [])
@@ -138,7 +139,7 @@ export default function AdminProfilePage() {
   const handleSave = async () => {
     setSubmitting(true)
     try {
-      const res = await fetch('/api/me', {
+      const res = await apiFetch('/api/me', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editForm),
@@ -169,7 +170,7 @@ export default function AdminProfilePage() {
     }
     setPasswordSubmitting(true)
     try {
-      const res = await fetch('/api/me/password', {
+      const res = await apiFetch('/api/me/password', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ currentPassword: passwordForm.currentPassword, newPassword: passwordForm.newPassword }),

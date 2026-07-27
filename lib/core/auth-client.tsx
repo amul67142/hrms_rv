@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { apiFetch } from '@/lib/core/fetcher'
 
 type SessionUser = {
   id: string
@@ -27,7 +28,7 @@ export function useSession() {
     let mounted = true
     const load = async () => {
       try {
-        const res = await fetch('/api/auth/session')
+        const res = await apiFetch('/api/auth/session')
         const json = await res.json()
         if (!mounted) return
         if (json?.user) {
@@ -56,7 +57,7 @@ export async function signIn(
   _provider: string,
   options: { email: string; password: string; redirect?: boolean; callbackUrl?: string }
 ) {
-  const res = await fetch('/api/auth/login', {
+  const res = await apiFetch('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: options.email, password: options.password }),
@@ -70,7 +71,7 @@ export async function signIn(
 }
 
 export async function signOut(options?: { callbackUrl?: string }) {
-  await fetch('/api/auth/signout', { method: 'POST' }).catch(() => {})
+  await apiFetch('/api/auth/signout', { method: 'POST' }).catch(() => {})
   if (typeof window !== 'undefined') {
     window.location.href = options?.callbackUrl || '/login'
   }

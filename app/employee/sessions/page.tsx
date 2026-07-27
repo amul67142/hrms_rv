@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/use-toast'
+import { apiFetch } from '@/lib/core/fetcher'
 
 interface Session {
   id: string
@@ -28,7 +29,7 @@ export default function EmployeeSessionsPage() {
   const [selectedSession, setSelectedSession] = React.useState<Session | null>(null)
 
   const fetchSessions = React.useCallback(() => {
-    fetch('/api/sessions')
+    apiFetch('/api/sessions')
       .then(res => res.json())
       .then(json => {
         if (json.success) setSessions(json.data)

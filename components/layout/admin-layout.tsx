@@ -48,6 +48,7 @@ const adminDefaultMeta: Record<string, PageMeta> = {
   '/admin/letters': { title: 'HR Letters', subtitle: 'Manage HR letters and documents' },
   '/admin/resignations': { title: 'Resignations', subtitle: 'Manage employee resignation requests' },
   '/admin/tickets': { title: 'Helpdesk', subtitle: 'Manage employee support tickets' },
+  '/admin/monthly-reports': { title: 'Monthly Reports', subtitle: 'View and review employee monthly reports' },
 }
 
 export function AdminLayout({ children, pageMeta, getPageMeta }: AdminLayoutProps) {

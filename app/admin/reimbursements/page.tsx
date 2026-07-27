@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { apiFetch } from '@/lib/core/fetcher'
 import {
   CheckCircle2,
   XCircle,
@@ -90,7 +91,7 @@ export default function AdminReimbursementsPage() {
       const params = new URLSearchParams()
       if (activeTab !== 'all') params.set('status', activeTab.toUpperCase())
 
-      const res = await fetch(`/api/reimbursements?${params}`)
+      const res = await apiFetch(`/api/reimbursements?${params}`)
       const json = await res.json()
       if (json.success) {
         setData(json.data)
@@ -124,7 +125,7 @@ export default function AdminReimbursementsPage() {
     setProcessing(true)
     try {
       const statusMap: Record<string, string> = { approve: 'APPROVED', reject: 'REJECTED', pay: 'PAID' }
-      const res = await fetch(`/api/reimbursements/${selectedItem.id}`, {
+      const res = await apiFetch(`/api/reimbursements/${selectedItem.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: statusMap[actionType], notes: actionNotes }),
@@ -150,7 +151,7 @@ export default function AdminReimbursementsPage() {
   const handleDelete = async (item: Reimbursement) => {
     if (!confirm(`Delete reimbursement "${item.title}"?`)) return
     try {
-      const res = await fetch(`/api/reimbursements/${item.id}`, { method: 'DELETE' })
+      const res = await apiFetch(`/api/reimbursements/${item.id}`, { method: 'DELETE' })
       const json = await res.json()
       if (json.success) {
         toast({ title: 'Deleted', description: 'Reimbursement has been deleted.' })

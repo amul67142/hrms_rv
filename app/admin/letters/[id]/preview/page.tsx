@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Download, Printer, FileText, Loader2 } from 'lucide-react'
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
+import { apiFetch } from '@/lib/core/fetcher'
 
 interface LetterData {
   id: string
@@ -61,8 +62,8 @@ export default function LetterPreviewPage() {
     const fetchData = async () => {
       try {
         const [letterRes, settingsRes] = await Promise.all([
-          fetch(`/api/letters/${letterId}`),
-          fetch('/api/settings/company'),
+          apiFetch(`/api/letters/${letterId}`),
+          apiFetch('/api/settings/company'),
         ])
         const letterData = await letterRes.json()
         const settingsData = await settingsRes.json()

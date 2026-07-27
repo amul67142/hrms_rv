@@ -11,6 +11,7 @@ import { ExcelPreview } from '@/components/excel-preview'
 import { useToast } from '@/components/ui/use-toast'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import { apiFetch } from '@/lib/core/fetcher'
 
 type Step = 1 | 2 | 3 | 4
 
@@ -56,7 +57,7 @@ export default function ImportEmployeesPage() {
 
   const handleDownloadTemplate = async () => {
     try {
-      const res = await fetch('/api/employees/template')
+      const res = await apiFetch('/api/employees/template')
       const blob = await res.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')

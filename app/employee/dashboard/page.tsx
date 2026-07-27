@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatDate } from '@/lib/core/utils'
 import Link from 'next/link'
+import { apiFetch } from '@/lib/core/fetcher'
 
 interface LeaveBalanceItem {
   id: string | null
@@ -174,9 +175,9 @@ export default function EmployeeDashboardPage() {
       setError(null)
       try {
         const [dashboardRes, todayRes, learningRes] = await Promise.all([
-          fetch(`/api/dashboard/employee/${employeeId}`),
-          fetch('/api/attendance/today'),
-          fetch('/api/learning/progress'),
+          apiFetch(`/api/dashboard/employee/${employeeId}`),
+          apiFetch('/api/attendance/today'),
+          apiFetch('/api/learning/progress'),
         ])
 
         const dashboardJson = await dashboardRes.json()
@@ -208,7 +209,7 @@ export default function EmployeeDashboardPage() {
         }
 
         // Also fetch leave balance
-        const balanceRes = await fetch(`/api/leave/balance/${employeeId}`)
+        const balanceRes = await apiFetch(`/api/leave/balance/${employeeId}`)
         const balanceJson = await balanceRes.json()
         if (balanceJson.success) {
           setLeaveBalanceData(balanceJson.data)

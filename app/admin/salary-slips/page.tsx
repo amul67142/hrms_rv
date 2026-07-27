@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { useToast } from '@/components/ui/use-toast'
 import { formatCurrency, getMonthName } from '@/lib/core/utils'
 import Link from 'next/link'
+import { apiFetch } from '@/lib/core/fetcher'
 
 interface SalarySlip {
   id: string
@@ -43,8 +44,8 @@ export default function SalarySlipsPage() {
     setLoading(true)
     try {
       const [slipsRes, empRes] = await Promise.all([
-        fetch(`/api/payroll?month=${month}&year=${year}`),
-        fetch('/api/employees?limit=100')
+        apiFetch(`/api/payroll?month=${month}&year=${year}`),
+        apiFetch('/api/employees?limit=100')
       ])
 
       const slipsJson = await slipsRes.json()
@@ -92,7 +93,7 @@ export default function SalarySlipsPage() {
   const handleDownload = async (id: string) => {
     try {
       setDownloading(id)
-      const res = await fetch(`/api/salary-slips/${id}?format=pdf`)
+      const res = await apiFetch(`/api/salary-slips/${id}?format=pdf`)
       if (res.ok) {
         const blob = await res.blob()
         const url = URL.createObjectURL(blob)
